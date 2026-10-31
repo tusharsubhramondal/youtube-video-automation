@@ -1,0 +1,293 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProjectFormat {
+  SHORTS
+  REGULAR
+}
+
+enum ProjectStatus {
+  DRAFT
+  RESEARCHING
+  SCRIPTING
+  MEDIA_GENERATION
+  EDITING
+  THUMBNAIL_SEO
+  READY_TO_PUBLISH
+  PUBLISHED
+  FAILED
+}
+
+enum AgentType {
+  RESEARCH
+  SCRIPT
+  IMAGE
+  VIDEO
+  VOICE
+  EDITING
+  THUMBNAIL
+  SEO
+  PUBLISHING
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum AssetType {
+  IMAGE
+  VIDEO
+  AUDIO
+  SUBTITLE
+  THUMBNAIL
+  MUSIC
+}
+
+enum RenderStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum PrivacyStatus {
+  PRIVATE
+  UNLISTED
+  PUBLIC
+}
+
+model User {
+  id              String            @id @default(cuid())
+  email           String            @unique
+  name            String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  projects        VideoProject[]
+  youtubeAccounts YouTubeAccount[]
+}
+
+model VideoProject {
+  id               String            @id @default(cuid())
+  title            String
+  topic            String
+  category         String            @default("Entertainment")
+  language         String            @default("English")
+  targetDuration   Int               @default(60) // in seconds
+  format           ProjectFormat     @default(REGULAR) // SHORTS (9:16) or REGULAR (16:9)
+  visualStyle      String            @default("Cinematic")
+  voiceStyle       String            @default("Deep Narration")
+  status           ProjectStatus     @default(DRAFT)
+  currentStage     String            @default("initial")
+  progress         Int               @default(0) // 0-100%
+  
+  // Research output
+  researchNotes    String?           @db.Text
+  targetAudience   String?
+  keywords         String?           @db.Text
+  contentOutline   String?           @db.Text
+  
+  // SEO & Metadata Output
+  seoTitle         String?
+  seoDescription   String?           @db.Text
+  seoTags          String?           @db.Text
+  thumbnailPrompt  String?           @db.Text
+  thumbnailUrl     String?
+  
+  // Final Rendered Video
+  finalVideoUrl    String?
+  finalVideoPath   String?
+  
+  userId           String?
+  user             User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  scenes           VideoScene[]
+  agentExecutions  AgentExecution[]
+  assets           GeneratedAsset[]
+  renders          VideoRender[]
+  publishedVideos  PublishedVideo[]
+  settings         ProjectSettings?
+
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model VideoScene {
+  id             String       @id @default(cuid())
+  projectId      String
+  project        VideoProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sceneNumber    Int
+  narrationText  String       @db.Text
+  visualPrompt   String       @db.Text
+  cameraMovement String?      @default("Zoom in slowly")
+  transition     String?      @default("fade")
+  duration       Float        @default(5.0) // seconds
+  status         String       @default("PENDING") // PENDING, GENERATING, READY, FAILED
+  
+  imageUrl       String?
+  videoUrl       String?
+  audioUrl       String?
+  subtitleText   String?
+  
+  assets         GeneratedAsset[]
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([projectId, sceneNumber])
+}
+
+model AgentExecution {
+  id              String          @id @default(cuid())
+  projectId       String
+  project         VideoProject    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  agentType       AgentType
+  status          ExecutionStatus @default(PENDING)
+  inputPayload    String?         @db.Text
+  outputPayload   String?         @db.Text
+  logs            String?         @db.Text
+  executionTimeMs Int?
+  errorMessage    String?         @db.Text
+  
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model GeneratedAsset {
+  id           String       @id @default(cuid())
+  projectId    String
+  project      VideoProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sceneId      String?
+  scene        VideoScene?  @relation(fields: [sceneId], references: [id], onDelete: SetNull)
+  type         AssetType
+  provider     String       @default("mock")
+  prompt       String?      @db.Text
+  url          String
+  localPath    String
+  mimeType     String?
+  fileSizeBytes Int?
+  metadata     String?      @db.Text
+  
+  createdAt    DateTime     @default(now())
+}
+
+model AIProvider {
+  id          String   @id @default(cuid())
+  name        String
+  type        String   // LLM, IMAGE, VIDEO, TTS, YOUTUBE
+  providerKey String   @unique // e.g., 'gemini', 'pollinations', 'edgetts', 'mock'
+  apiKey      String?
+  baseUrl     String?
+  modelName   String?
+  isDefault   Boolean  @default(false)
+  isEnabled   Boolean  @default(true)
+  configJson  String?  @db.Text
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model VoiceProfile {
+  id          String   @id @default(cuid())
+  name        String
+  provider    String   @default("edgetts")
+  voiceId     String   // e.g., 'en-US-GuyNeural'
+  language    String   @default("en-US")
+  gender      String   @default("Male")
+  sampleUrl   String?
+  isDefault   Boolean  @default(false)
+  
+  createdAt   DateTime @default(now())
+}
+
+model VideoRender {
+  id            String       @id @default(cuid())
+  projectId     String
+  project       VideoProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  status        RenderStatus @default(QUEUED)
+  progress      Int          @default(0) // 0-100%
+  resolution    String       @default("1080p")
+  aspectRatio   String       @default("16:9")
+  fps           Int          @default(30)
+  durationSec   Float?
+  outputPath    String?
+  outputUrl     String?
+  fileSizeBytes BigInt?
+  errorMessage  String?      @db.Text
+  
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model YouTubeAccount {
+  id                 String           @id @default(cuid())
+  userId             String?
+  user               User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  channelId          String           @unique
+  channelTitle       String
+  channelDescription String?          @db.Text
+  avatarUrl          String?
+  accessToken        String           @db.Text
+  refreshToken       String?          @db.Text
+  tokenExpiry        DateTime?
+  isConnected        Boolean          @default(true)
+  
+  publishedVideos    PublishedVideo[]
+
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+}
+
+model PublishedVideo {
+  id               String         @id @default(cuid())
+  projectId        String
+  project          VideoProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  youtubeAccountId String
+  youtubeAccount   YouTubeAccount @relation(fields: [youtubeAccountId], references: [id], onDelete: Cascade)
+  youtubeVideoId   String         @unique
+  title            String
+  description      String         @db.Text
+  tags             String?        @db.Text
+  categoryId       String         @default("22")
+  privacyStatus    PrivacyStatus  @default(PRIVATE)
+  youtubeUrl       String
+  userApproved     Boolean        @default(false)
+  approvedAt       DateTime?
+  publishedAt      DateTime?
+  
+  viewCount        Int            @default(0)
+  likeCount        Int            @default(0)
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model ProjectSettings {
+  id                    String       @id @default(cuid())
+  projectId             String       @unique
+  project               VideoProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  resolution            String       @default("1080p")
+  fps                   Int          @default(30)
+  enableSubtitles       Boolean      @default(true)
+  subtitleFont          String       @default("Arial")
+  subtitleFontSize      Int          @default(24)
+  subtitleColor         String       @default("#FFFFFF")
+  subtitleBgColor       String       @default("#00000080")
+  backgroundMusicVolume Float        @default(0.15)
+  voiceVolume           Float        @default(1.0)
+  autoPublish           Boolean      @default(false)
+  
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+}
+

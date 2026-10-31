@@ -1,0 +1,44 @@
+# Node dependencies
+node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Build outputs
+dist/
+**/dist/
+build/
+**/build/
+.next/
+out/
+
+# Storage & Temporary files
+uploads/*
+!uploads/.gitkeep
+**/uploads/*
+!**/uploads/.gitkeep
+renders/*
+!renders/.gitkeep
+**/renders/*
+!**/renders/.gitkeep
+temp/*
+!temp/.gitkeep
+**/temp/*
+!**/temp/.gitkeep
+
+# Prisma
+dev.db
+dev.db-journal
+
+# OS files
+.DS_Store
+Thumbs.db
