@@ -8,6 +8,7 @@ import { initQueues, registerWorker } from './services/queue.service.js';
 import { editingAgent } from './agents/editing.agent.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 import healthRoutes from './routes/health.routes.js';
+import authRoutes from './routes/auth.routes.js';
 import projectRoutes from './routes/project.routes.js';
 import sceneRoutes from './routes/scene.routes.js';
 import agentRoutes from './routes/agent.routes.js';
@@ -15,6 +16,7 @@ import assetRoutes from './routes/asset.routes.js';
 import renderRoutes from './routes/render.routes.js';
 import youtubeRoutes from './routes/youtube.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
+import voiceRoutes from './routes/voice.routes.js';
 
 const app = express();
 
@@ -32,6 +34,8 @@ app.use('/renders', express.static(config.storage.renderDir));
 
 // API Routes
 app.use('/api', healthRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/voices', voiceRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/scenes', sceneRoutes);
 app.use('/api/agents', agentRoutes);

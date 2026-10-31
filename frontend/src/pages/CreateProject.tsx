@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Sparkles,
@@ -6,10 +6,13 @@ import {
   Monitor,
   Check,
   Zap,
+  Volume2,
+  Loader2,
 } from 'lucide-react';
-import { projectService, agentService } from '../services/api';
+import { projectService, agentService, voiceService } from '../services/api';
 import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
+import { VoiceProfile } from '../types';
 
 export const CreateProject: React.FC = () => {
   const navigate = useNavigate();
@@ -20,9 +23,55 @@ export const CreateProject: React.FC = () => {
   const [format, setFormat] = useState<'SHORTS' | 'REGULAR'>('REGULAR');
   const [targetDuration, setTargetDuration] = useState(60);
   const [visualStyle, setVisualStyle] = useState('Cinematic');
-  const [voiceStyle, setVoiceStyle] = useState('Deep Narration');
+  const [voiceStyle, setVoiceStyle] = useState('Deep Narration (Christopher)');
+  const [voices, setVoices] = useState<VoiceProfile[]>([]);
+  const [isPreviewingVoice, setIsPreviewingVoice] = useState(false);
+  const [playingAudio, setPlayingAudio] = useState<HTMLAudioElement | null>(null);
   const [autoRunPipeline, setAutoRunPipeline] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    voiceService
+      .getVoices()
+      .then((data) => {
+        if (data && data.length > 0) {
+          setVoices(data);
+          const defaultVoice = data.find((v) => v.isDefault) || data[0];
+          setVoiceStyle(defaultVoice.name);
+        }
+      })
+      .catch((err) => console.error('Failed to load voice profiles:', err));
+  }, []);
+
+  const handlePreviewVoice = async () => {
+    const selected = voices.find((v) => v.name === voiceStyle);
+    if (!selected) return;
+
+    if (playingAudio) {
+      playingAudio.pause();
+      setPlayingAudio(null);
+      return;
+    }
+
+    try {
+      setIsPreviewingVoice(true);
+      let audioUrl = selected.sampleUrl;
+      if (!audioUrl) {
+        const previewRes = await voiceService.previewVoice(selected.id);
+        audioUrl = previewRes.sampleUrl;
+      }
+      if (audioUrl) {
+        const audio = new Audio(audioUrl);
+        audio.onended = () => setPlayingAudio(null);
+        await audio.play();
+        setPlayingAudio(audio);
+      }
+    } catch (err) {
+      console.error('Failed to preview voice:', err);
+    } finally {
+      setIsPreviewingVoice(false);
+    }
+  };
 
   const categories = [
     'Technology & AI',
@@ -266,16 +315,52 @@ export const CreateProject: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">Voice Style</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-slate-300">Voice Style & Narration Actor</label>
+              <button
+                type="button"
+                onClick={handlePreviewVoice}
+                disabled={isPreviewingVoice}
+                className="text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1 font-medium transition-colors"
+              >
+                {isPreviewingVoice ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : playingAudio ? (
+                  <span className="text-amber-400 font-semibold">Stop Audio</span>
+                ) : (
+                  <>
+                    <Volume2 className="w-3.5 h-3.5" />
+                    <span>Audition Voice</span>
+                  </>
+                )}
+              </button>
+            </div>
             <select
               value={voiceStyle}
-              onChange={(e) => setVoiceStyle(e.target.value)}
+              onChange={(e) => {
+                if (playingAudio) {
+                  playingAudio.pause();
+                  setPlayingAudio(null);
+                }
+                setVoiceStyle(e.target.value);
+              }}
               className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:ring-2 focus:ring-brand-500"
             >
-              {voiceStyles.map((v) => (
-                <option key={v} value={v}>{v}</option>
-              ))}
+              {voices.length > 0
+                ? voices.map((v) => (
+                    <option key={v.id} value={v.name}>
+                      {v.name} ({v.gender} • {v.language})
+                    </option>
+                  ))
+                : voiceStyles.map((v) => (
+                    <option key={v} value={v}>
+                      {v}
+                    </option>
+                  ))}
             </select>
+            <p className="text-[11px] text-slate-400 mt-1">
+              AI TTS synthesizes emotional pacing and sentence rhythm customized to the scene context.
+            </p>
           </div>
         </Card>
 

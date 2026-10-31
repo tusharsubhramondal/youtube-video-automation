@@ -1,5 +1,23 @@
 export type ProjectFormat = 'SHORTS' | 'REGULAR';
 
+export interface User {
+  id: string;
+  email: string;
+  name?: string | null;
+  role: string;
+}
+
+export interface VoiceProfile {
+  id: string;
+  name: string;
+  voiceId: string;
+  language: string;
+  gender: string;
+  sampleUrl?: string | null;
+  isDefault: boolean;
+  createdAt?: string;
+}
+
 export type ProjectStatus =
   | 'DRAFT'
   | 'RESEARCHING'

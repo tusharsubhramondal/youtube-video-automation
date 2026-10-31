@@ -9,6 +9,8 @@ import {
   PublishedVideo,
   AIProviderConfig,
   ProjectSettings,
+  User,
+  VoiceProfile,
 } from '../types';
 
 const api = axios.create({
@@ -17,6 +19,60 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('autotube_token');
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export const authService = {
+  getMe: async (): Promise<{ user: User; token?: string }> => {
+    const res = await api.get('/auth/me');
+    if (res.data.data?.token) {
+      localStorage.setItem('autotube_token', res.data.data.token);
+    }
+    return res.data.data;
+  },
+  login: async (email: string, password: string): Promise<{ user: User; token: string }> => {
+    const res = await api.post('/auth/login', { email, password });
+    if (res.data.data?.token) {
+      localStorage.setItem('autotube_token', res.data.data.token);
+    }
+    return res.data.data;
+  },
+  register: async (email: string, password: string, name?: string): Promise<{ user: User; token: string }> => {
+    const res = await api.post('/auth/register', { email, password, name });
+    if (res.data.data?.token) {
+      localStorage.setItem('autotube_token', res.data.data.token);
+    }
+    return res.data.data;
+  },
+  logout: () => {
+    localStorage.removeItem('autotube_token');
+  },
+};
+
+export const voiceService = {
+  getVoices: async (): Promise<VoiceProfile[]> => {
+    const res = await api.get('/voices');
+    return res.data.data;
+  },
+  createVoice: async (data: Partial<VoiceProfile>): Promise<VoiceProfile> => {
+    const res = await api.post('/voices', data);
+    return res.data.data;
+  },
+  previewVoice: async (id: string): Promise<{ sampleUrl: string; duration: number }> => {
+    const res = await api.post(`/voices/${id}/preview`);
+    return res.data.data;
+  },
+  deleteVoice: async (id: string) => {
+    const res = await api.delete(`/voices/${id}`);
+    return res.data;
+  },
+};
 
 export const projectService = {
   getProjects: async (): Promise<VideoProject[]> => {

@@ -130,11 +130,48 @@ Visit `http://localhost:5173` in your browser.
 
 ---
 
-## 🔒 Security & Safe Publishing
+## 🔒 Security, Authentication & Safe Publishing
 
-1. **Explicit Human Confirmation**: The Publishing Agent enforces a strict check where `userApproved === true` must be transmitted. Video publishing will reject requests if approval is absent.
-2. **Secret Isolation**: Frontend never receives or stores third-party API keys or OAuth refresh tokens.
-3. **File Validation**: Uploads are restricted by MIME type and bounded by a 100MB limit.
+1. **User Authentication & RBAC**:
+   - Built-in scrypt password hashing with constant-time cryptographic verification (`timingSafeEqual`).
+   - HS256 JWT tokens with bearer authentication middleware.
+   - Creator and Admin roles with default studio creator auto-seeding.
+   - Endpoints: `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`.
+2. **Explicit Human Confirmation**:
+   - The Publishing Agent enforces a strict check where `userApproved === true` must be transmitted. Video publishing will immediately abort with HTTP 400/policy rejection if approval is absent.
+3. **Dynamic Voice Profiles & TTS Actor Engine**:
+   - Dynamic voice profiles (`POST /api/voices`, `GET /api/voices`, `POST /api/voices/:id/preview`).
+   - Instant audio auditioning in the studio creation wizard and settings dashboard.
+4. **Secret Isolation**:
+   - Frontend never receives or stores third-party API keys or OAuth refresh tokens.
+5. **File Validation**:
+   - Uploads are restricted by MIME type and bounded by a 100MB limit with Multer validation.
+
+---
+
+## 🧪 Automated Testing Suite
+
+AutoTube Studio includes a comprehensive 13-stage end-to-end integration test suite verifying the complete production lifecycle:
+
+```bash
+cd backend
+npm run test:e2e
+```
+
+**Tested Stages**:
+1. PostgreSQL Database Connectivity & Prisma client binding
+2. Scrypt password hashing, timingSafeEqual validation, and JWT token issuance
+3. Dynamic Voice Profiles engine and auto-seeding
+4. Video project initialization & multi-format configuration
+5. Agent 1: Research Agent (topic angles & high-intent keywords)
+6. Agent 2: Script Agent (scene generation & structured narration)
+7. Agent 3: Image Agent (visual synthesis with Pollinations AI & fallback)
+8. Agent 5: Voice Agent (TTS audio generation & duration synchronization)
+9. Agent 4: Video Agent (FFmpeg Ken Burns motion video synthesis)
+10. Agent 6: Editing Agent (Multi-clip concatenation, audio ducking, subtitle burn-in, final master MP4)
+11. Agent 7: Thumbnail Agent (high-CTR visual concepts & text overlays)
+12. Agent 8: SEO Agent (viral titles, descriptions, and tags)
+13. Agent 9: YouTube Publishing Agent with strict user approval guardrail
 
 ---
 

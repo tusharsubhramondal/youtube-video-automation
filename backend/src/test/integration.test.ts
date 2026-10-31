@@ -1,4 +1,5 @@
 import { prisma } from '../services/prisma.service.js';
+import { AuthService } from '../services/auth.service.js';
 import { orchestrator } from '../agents/orchestrator.js';
 import { researchAgent } from '../agents/research.agent.js';
 import { scriptAgent } from '../agents/script.agent.js';
@@ -21,12 +22,56 @@ async function runEndToEndTests() {
 
   try {
     // 1. Database Connection Test
-    console.log('[TEST 1/11] Testing Database Connectivity...');
+    console.log('[TEST 1/13] Testing Database Connectivity...');
     await prisma.$connect();
     console.log('✓ Database connection verified.\n');
 
-    // 2. Video Project Creation
-    console.log('[TEST 2/11] Creating Test Video Project...');
+    // 2. Authentication & Security Services Test
+    console.log('[TEST 2/13] Testing Authentication, Scrypt Hashing & JWT Security...');
+    const rawPass = 'CreatorSecurePassword2026!';
+    const hashed = AuthService.hashPassword(rawPass);
+    const validCheck = AuthService.verifyPassword(rawPass, hashed);
+    const invalidCheck = AuthService.verifyPassword('WrongPassword', hashed);
+    if (!validCheck || invalidCheck) {
+      throw new Error('AuthService password hashing/verification failed.');
+    }
+    const testUser = await AuthService.getOrCreateDefaultUser();
+    const token = AuthService.generateToken({
+      id: testUser.id,
+      email: testUser.email,
+      name: testUser.name,
+      role: testUser.role,
+    });
+    const verifiedUser = AuthService.verifyToken(token);
+    if (!verifiedUser || verifiedUser.id !== testUser.id) {
+      throw new Error('JWT generation or verification failed.');
+    }
+    console.log(`✓ Auth & Security verified:`);
+    console.log(`  - Default User ID: ${testUser.id}`);
+    console.log(`  - User Email: ${testUser.email} (Role: ${testUser.role})`);
+    console.log(`  - JWT Token successfully issued & validated.\n`);
+
+    // 3. Voice Profiles Management Test
+    console.log('[TEST 3/13] Testing Voice Profiles Engine...');
+    const voiceCount = await prisma.voiceProfile.count();
+    if (voiceCount === 0) {
+      await prisma.voiceProfile.create({
+        data: {
+          name: 'Deep Narration (Christopher)',
+          voiceId: 'en-US-ChristopherNeural',
+          language: 'en-US',
+          gender: 'Male',
+          isDefault: true,
+        },
+      });
+    }
+    const voices = await prisma.voiceProfile.findMany();
+    console.log(`✓ Voice Profiles verified:`);
+    console.log(`  - Total Available Voices: ${voices.length}`);
+    console.log(`  - Primary Voice: ${voices[0]?.name} (${voices[0]?.voiceId})\n`);
+
+    // 4. Video Project Creation
+    console.log('[TEST 4/13] Creating Test Video Project...');
     const project = await prisma.videoProject.create({
       data: {
         title: 'The AI Revolution in Autonomous Robotics',
@@ -39,50 +84,51 @@ async function runEndToEndTests() {
         voiceStyle: 'Deep Narration',
         status: 'DRAFT',
         currentStage: 'initial',
+        userId: testUser.id,
       },
     });
     testProjectId = project.id;
     console.log(`✓ Project created successfully (ID: ${project.id}, Format: ${project.format})\n`);
 
-    // 3. Research Agent Execution
-    console.log('[TEST 3/11] Executing Agent 1: Research Agent...');
+    // 5. Research Agent Execution
+    console.log('[TEST 5/13] Executing Agent 1: Research Agent...');
     const research = await researchAgent.run(testProjectId);
     console.log(`✓ Research Agent completed:`);
     console.log(`  - Angle: "${research.data.angle}"`);
     console.log(`  - Keywords: ${research.data.keywords.slice(0, 4).join(', ')}...\n`);
 
-    // 4. Script Agent Execution
-    console.log('[TEST 4/11] Executing Agent 2: Script Agent...');
+    // 6. Script Agent Execution
+    console.log('[TEST 6/13] Executing Agent 2: Script Agent...');
     const script = await scriptAgent.run(testProjectId);
     const scenes = await prisma.videoScene.findMany({ where: { projectId: testProjectId } });
     console.log(`✓ Script Agent completed:`);
     console.log(`  - Generated Scenes: ${scenes.length}`);
     console.log(`  - Scene 1 Narration: "${scenes[0]?.narrationText}"\n`);
 
-    // 5. Image Agent Execution
-    console.log('[TEST 5/11] Executing Agent 3: Image Agent (Scene 1)...');
+    // 7. Image Agent Execution
+    console.log('[TEST 7/13] Executing Agent 3: Image Agent (Scene 1)...');
     const imageResult = await imageAgent.run(testProjectId, scenes[0].id);
     const scene1AfterImage = await prisma.videoScene.findUnique({ where: { id: scenes[0].id } });
     console.log(`✓ Image Agent completed:`);
     console.log(`  - Image URL: ${scene1AfterImage?.imageUrl}\n`);
 
-    // 6. Voice Agent Execution
-    console.log('[TEST 6/11] Executing Agent 5: Voice Agent (Scene 1)...');
+    // 8. Voice Agent Execution
+    console.log('[TEST 8/13] Executing Agent 5: Voice Agent (Scene 1)...');
     const voiceResult = await voiceAgent.run(testProjectId, scenes[0].id);
     const scene1AfterVoice = await prisma.videoScene.findUnique({ where: { id: scenes[0].id } });
     console.log(`✓ Voice Agent completed:`);
     console.log(`  - Audio URL: ${scene1AfterVoice?.audioUrl}`);
     console.log(`  - Synced Spoken Duration: ${scene1AfterVoice?.duration}s\n`);
 
-    // 7. Video Agent Execution (Dynamic Ken Burns Motion Synthesis)
-    console.log('[TEST 7/11] Executing Agent 4: Video Agent (Scene 1)...');
+    // 9. Video Agent Execution (Dynamic Ken Burns Motion Synthesis)
+    console.log('[TEST 9/13] Executing Agent 4: Video Agent (Scene 1)...');
     const videoResult = await videoAgent.run(testProjectId, scenes[0].id);
     const scene1AfterVideo = await prisma.videoScene.findUnique({ where: { id: scenes[0].id } });
     console.log(`✓ Video Agent completed:`);
     console.log(`  - Video Clip URL: ${scene1AfterVideo?.videoUrl}\n`);
 
-    // 8. Editing Agent Execution (FFmpeg Multi-Clip Composition Engine with Audio Ducking & Subtitles)
-    console.log('[TEST 8/11] Executing Agent 6: Editing Agent (Multi-Clip Concat, Audio Ducking & Subtitle Burn-In)...');
+    // 10. Editing Agent Execution (FFmpeg Multi-Clip Composition Engine with Audio Ducking & Subtitles)
+    console.log('[TEST 10/13] Executing Agent 6: Editing Agent (Multi-Clip Concat, Audio Ducking & Subtitle Burn-In)...');
     const editResult = await editingAgent.run(testProjectId, undefined, {
       resolution: '720p',
       fps: 30,
@@ -99,16 +145,16 @@ async function runEndToEndTests() {
     console.log(`  - Subtitles VTT URL: ${editResult.data.subtitlesVttUrl}`);
     console.log(`  - Master MP4 Exists on Disk: ${fs.existsSync(projectAfterEdit?.finalVideoPath || '')}\n`);
 
-    // 9. Thumbnail Agent Execution
-    console.log('[TEST 9/11] Executing Agent 7: Thumbnail Agent...');
+    // 11. Thumbnail Agent Execution
+    console.log('[TEST 11/13] Executing Agent 7: Thumbnail Agent...');
     const thumbResult = await thumbnailAgent.run(testProjectId);
     const projectAfterThumb = await prisma.videoProject.findUnique({ where: { id: testProjectId } });
     console.log(`✓ Thumbnail Agent completed:`);
     console.log(`  - Thumbnail URL: ${projectAfterThumb?.thumbnailUrl}`);
     console.log(`  - Concept: ${thumbResult.data.concept}\n`);
 
-    // 10. SEO Agent Execution
-    console.log('[TEST 10/11] Executing Agent 8: SEO Agent...');
+    // 12. SEO Agent Execution
+    console.log('[TEST 12/13] Executing Agent 8: SEO Agent...');
     const seoResult = await seoAgent.run(testProjectId);
     const projectAfterSeo = await prisma.videoProject.findUnique({ where: { id: testProjectId } });
     console.log(`✓ SEO Agent completed:`);
@@ -116,8 +162,8 @@ async function runEndToEndTests() {
     console.log(`  - Description Length: ${projectAfterSeo?.seoDescription?.length} characters`);
     console.log(`  - Status: ${projectAfterSeo?.status}\n`);
 
-    // 11. Publishing Agent Execution with Safety Gate
-    console.log('[TEST 11/11] Testing Publishing Agent & Strict User Approval Guardrail...');
+    // 13. Publishing Agent Execution with Safety Gate
+    console.log('[TEST 13/13] Testing Publishing Agent & Strict User Approval Guardrail...');
     
     // Connect sandbox test channel
     const testChannel = await prisma.youTubeAccount.upsert({
@@ -166,7 +212,7 @@ async function runEndToEndTests() {
     console.log(`  - Privacy: ${published.privacyStatus}\n`);
 
     console.log('======================================================');
-    console.log('🎉 ALL 11 END-TO-END TESTS PASSED SUCCESSFULLY! 🎉');
+    console.log('🎉 ALL 13 END-TO-END TESTS PASSED SUCCESSFULLY! 🎉');
     console.log('======================================================\n');
   } catch (error: any) {
     console.error('❌ Integration test failed:', error);

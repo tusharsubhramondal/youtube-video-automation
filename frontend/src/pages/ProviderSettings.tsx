@@ -7,11 +7,19 @@ import {
   Save,
   Cpu,
   Sparkles,
+  Mic,
+  Volume2,
+  Plus,
+  Trash2,
+  Play,
+  Pause,
+  Loader2,
 } from 'lucide-react';
-import { settingsService } from '../services/api';
+import { settingsService, voiceService } from '../services/api';
 import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
+import { VoiceProfile } from '../types';
 
 export const ProviderSettings: React.FC = () => {
   const [settings, setSettings] = useState<any>(null);
@@ -22,8 +30,21 @@ export const ProviderSettings: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Voice Profiles State
+  const [voices, setVoices] = useState<VoiceProfile[]>([]);
+  const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
+  const [loadingVoiceId, setLoadingVoiceId] = useState<string | null>(null);
+  const [activeAudio, setActiveAudio] = useState<HTMLAudioElement | null>(null);
+  const [showAddVoice, setShowAddVoice] = useState(false);
+  const [newVoiceName, setNewVoiceName] = useState('');
+  const [newVoiceId, setNewVoiceId] = useState('');
+  const [newVoiceLang, setNewVoiceLang] = useState('en-US');
+  const [newVoiceGender, setNewVoiceGender] = useState('Male');
+  const [isAddingVoice, setIsAddingVoice] = useState(false);
+
   useEffect(() => {
     loadSettings();
+    loadVoices();
   }, []);
 
   const loadSettings = async () => {
@@ -40,6 +61,84 @@ export const ProviderSettings: React.FC = () => {
       console.error('Failed to load settings:', err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadVoices = async () => {
+    try {
+      const data = await voiceService.getVoices();
+      setVoices(data);
+    } catch (err) {
+      console.error('Failed to load voice profiles:', err);
+    }
+  };
+
+  const handlePlayVoice = async (voice: VoiceProfile) => {
+    if (playingVoiceId === voice.id && activeAudio) {
+      activeAudio.pause();
+      setActiveAudio(null);
+      setPlayingVoiceId(null);
+      return;
+    }
+
+    if (activeAudio) {
+      activeAudio.pause();
+    }
+
+    try {
+      setLoadingVoiceId(voice.id);
+      let sampleUrl = voice.sampleUrl;
+      if (!sampleUrl) {
+        const preview = await voiceService.previewVoice(voice.id);
+        sampleUrl = preview.sampleUrl;
+        await loadVoices();
+      }
+      if (sampleUrl) {
+        const audio = new Audio(sampleUrl);
+        audio.onended = () => {
+          setPlayingVoiceId(null);
+          setActiveAudio(null);
+        };
+        await audio.play();
+        setActiveAudio(audio);
+        setPlayingVoiceId(voice.id);
+      }
+    } catch (err) {
+      console.error('Failed to preview voice:', err);
+    } finally {
+      setLoadingVoiceId(null);
+    }
+  };
+
+  const handleAddVoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newVoiceName.trim()) return;
+    setIsAddingVoice(true);
+    try {
+      await voiceService.createVoice({
+        name: newVoiceName,
+        voiceId: newVoiceId || newVoiceName,
+        language: newVoiceLang,
+        gender: newVoiceGender,
+      });
+      setNewVoiceName('');
+      setNewVoiceId('');
+      setShowAddVoice(false);
+      await loadVoices();
+    } catch (err) {
+      console.error('Failed to add voice profile:', err);
+    } finally {
+      setIsAddingVoice(false);
+    }
+  };
+
+  const handleDeleteVoice = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this voice profile?')) return;
+    try {
+      await voiceService.deleteVoice(id);
+      await loadVoices();
+    } catch (err) {
+      console.error('Failed to delete voice profile:', err);
     }
   };
 
@@ -139,6 +238,153 @@ export const ProviderSettings: React.FC = () => {
               Save Gemini Settings
             </Button>
           </div>
+        </div>
+      </Card>
+
+      {/* Voice Profiles Management Card */}
+      <Card className="space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-purple-950/70 text-purple-400 border border-purple-800/60">
+              <Mic className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-white text-base">Voice Profiles & TTS Narration Actors</h3>
+              <p className="text-xs text-slate-400">
+                Configure voiceover narration personas, audition live synthesis samples, or register custom voices.
+              </p>
+            </div>
+          </div>
+
+          <Button
+            size="sm"
+            variant="outline"
+            icon={<Plus className="w-3.5 h-3.5" />}
+            onClick={() => setShowAddVoice(!showAddVoice)}
+          >
+            {showAddVoice ? 'Cancel' : 'Add Voice'}
+          </Button>
+        </div>
+
+        {/* Add Voice Form */}
+        {showAddVoice && (
+          <form onSubmit={handleAddVoice} className="p-3 bg-slate-950 border border-slate-800 rounded-lg space-y-3">
+            <h4 className="text-xs font-semibold text-white">Create Custom Voice Profile</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              <div>
+                <label className="text-slate-300 block mb-1">Display Name *</label>
+                <input
+                  required
+                  type="text"
+                  value={newVoiceName}
+                  onChange={(e) => setNewVoiceName(e.target.value)}
+                  placeholder="e.g., Tech Guru (Liam)"
+                  className="w-full bg-slate-900 border border-slate-800 rounded p-2 text-white"
+                />
+              </div>
+              <div>
+                <label className="text-slate-300 block mb-1">Voice ID / Model Code *</label>
+                <input
+                  type="text"
+                  value={newVoiceId}
+                  onChange={(e) => setNewVoiceId(e.target.value)}
+                  placeholder="e.g., en-US-LiamNeural"
+                  className="w-full bg-slate-900 border border-slate-800 rounded p-2 text-white font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-slate-300 block mb-1">Language</label>
+                <input
+                  type="text"
+                  value={newVoiceLang}
+                  onChange={(e) => setNewVoiceLang(e.target.value)}
+                  placeholder="en-US"
+                  className="w-full bg-slate-900 border border-slate-800 rounded p-2 text-white"
+                />
+              </div>
+              <div>
+                <label className="text-slate-300 block mb-1">Gender</label>
+                <select
+                  value={newVoiceGender}
+                  onChange={(e) => setNewVoiceGender(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 rounded p-2 text-white"
+                >
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Neutral">Neutral</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button size="sm" variant="primary" type="submit" isLoading={isAddingVoice}>
+                Save Voice Profile
+              </Button>
+            </div>
+          </form>
+        )}
+
+        {/* Voice List */}
+        <div className="space-y-2 text-xs">
+          {voices.length === 0 ? (
+            <p className="text-slate-400 text-center py-4">No voice profiles loaded. Generating defaults...</p>
+          ) : (
+            voices.map((v) => (
+              <div
+                key={v.id}
+                className="p-3 bg-slate-950/70 border border-slate-800 rounded-lg flex items-center justify-between hover:border-slate-700 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handlePlayVoice(v)}
+                    disabled={loadingVoiceId === v.id}
+                    className="p-2 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-brand-400 transition-colors"
+                  >
+                    {loadingVoiceId === v.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-brand-400" />
+                    ) : playingVoiceId === v.id ? (
+                      <Pause className="w-4 h-4 text-amber-400" />
+                    ) : (
+                      <Play className="w-4 h-4" />
+                    )}
+                  </button>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-white">{v.name}</span>
+                      {v.isDefault && (
+                        <span className="px-1.5 py-0.5 text-[9px] bg-brand-500/20 text-brand-300 rounded border border-brand-500/40 font-mono">
+                          DEFAULT
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-slate-400">
+                      {v.gender} • {v.language} • {v.voiceId}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handlePlayVoice(v)}
+                    disabled={loadingVoiceId === v.id}
+                  >
+                    {playingVoiceId === v.id ? 'Stop' : 'Audition'}
+                  </Button>
+                  {!v.isDefault && (
+                    <button
+                      onClick={() => handleDeleteVoice(v.id)}
+                      className="p-2 text-slate-400 hover:text-red-400 rounded transition-colors"
+                      title="Delete profile"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </Card>
 
