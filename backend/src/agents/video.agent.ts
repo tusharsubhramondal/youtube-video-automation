@@ -41,6 +41,22 @@ export const videoAgent = {
       const results = [];
 
       for (const scene of scenesToProcess) {
+        // Check if an externally imported/uploaded video clip is already associated with this scene
+        if (scene.videoUrl && !sceneId) {
+          const existingFilename = path.basename(scene.videoUrl);
+          const existingPath = path.join(config.storage.uploadDir, existingFilename);
+          if (fs.existsSync(existingPath) && existingPath.endsWith('.mp4')) {
+            logger.info(`Scene ${scene.sceneNumber} has existing imported clip: ${existingFilename}. Preserving external asset.`);
+            results.push({
+              sceneNumber: scene.sceneNumber,
+              url: scene.videoUrl,
+              localPath: existingPath,
+              durationSeconds: scene.duration || 5.0,
+            });
+            continue;
+          }
+        }
+
         const filename = `clip_${project.id}_${scene.sceneNumber}_${Date.now()}.mp4`;
         const outputPath = path.join(config.storage.uploadDir, filename);
 

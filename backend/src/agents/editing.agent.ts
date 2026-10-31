@@ -131,8 +131,12 @@ export const editingAgent = {
 
         await new Promise<void>((resolve, reject) => {
           let cmd = ffmpeg();
+          const fadeDuration = 0.3;
+          const fadeOutStart = Math.max(0, sceneDuration - fadeDuration);
+          const transitionFilter = `fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${fadeOutStart}:d=${fadeDuration}`;
+
           if (sourceFile && (sourceFile.endsWith('.png') || sourceFile.endsWith('.jpg') || sourceFile.endsWith('.jpeg'))) {
-            // Static image: create loop clip with motion zoom
+            // Static image: create loop clip with motion zoom and scene transition
             const totalFrames = Math.round(sceneDuration * fps);
             cmd = cmd
               .input(sourceFile)
@@ -140,16 +144,18 @@ export const editingAgent = {
               .videoFilters([
                 `scale=${width * 2}:${height * 2}`,
                 `zoompan=z='min(zoom+0.0015,1.25)':d=${totalFrames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=${width}x${height}:fps=${fps}`,
+                transitionFilter,
                 'format=yuv420p',
               ]);
           } else if (sourceFile) {
-            // Existing video clip: scale & pad to target resolution
+            // Existing video clip: scale, pad & scene transition
             cmd = cmd
               .input(sourceFile)
               .videoFilters([
                 `scale=${width}:${height}:force_original_aspect_ratio=decrease`,
                 `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:black`,
                 `fps=${fps}`,
+                transitionFilter,
                 'format=yuv420p',
               ]);
           } else {
@@ -157,7 +163,7 @@ export const editingAgent = {
             cmd = cmd
               .input(`testsrc=duration=${sceneDuration}:size=${width}x${height}:rate=${fps}`)
               .inputFormat('lavfi')
-              .videoFilters(['format=yuv420p']);
+              .videoFilters([transitionFilter, 'format=yuv420p']);
           }
 
           cmd

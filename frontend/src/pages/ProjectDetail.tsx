@@ -64,7 +64,14 @@ export const ProjectDetail: React.FC = () => {
     return <div className="p-12 text-center text-slate-400">Loading project studio...</div>;
   }
 
-  const keywordsList: string[] = project.keywords ? JSON.parse(project.keywords) : [];
+  let keywordsList: string[] = [];
+  if (project.keywords) {
+    try {
+      keywordsList = JSON.parse(project.keywords);
+    } catch {
+      keywordsList = project.keywords.split(',').map((k) => k.trim()).filter(Boolean);
+    }
+  }
 
   return (
     <div className="space-y-6">

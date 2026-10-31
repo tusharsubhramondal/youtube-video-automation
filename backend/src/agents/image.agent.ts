@@ -48,8 +48,12 @@ export const imageAgent = {
         const filename = `scene_${project.id}_${scene.sceneNumber}_${Date.now()}.png`;
         const outputPath = path.join(config.storage.uploadDir, filename);
 
+        // Enhance prompt with character consistency & coherent artistic styling
+        const consistencyDirective = `consistent character design and continuity, coherent wardrobe and identity, ${project.visualStyle} aesthetic, cinematic lighting`;
+        const enrichedPrompt = `${scene.visualPrompt}, ${consistencyDirective}, sharp details, 8k`;
+
         const imgResult = await imageProvider.generateImage({
-          prompt: `${scene.visualPrompt}, ${project.visualStyle} style`,
+          prompt: enrichedPrompt,
           aspectRatio,
           style: project.visualStyle,
           outputPath,
