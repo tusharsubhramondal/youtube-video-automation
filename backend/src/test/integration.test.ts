@@ -81,14 +81,23 @@ async function runEndToEndTests() {
     console.log(`✓ Video Agent completed:`);
     console.log(`  - Video Clip URL: ${scene1AfterVideo?.videoUrl}\n`);
 
-    // 8. Editing Agent Execution (FFmpeg Multi-Clip Composition Engine)
-    console.log('[TEST 8/11] Executing Agent 6: Editing Agent (Master MP4 Render)...');
-    const editResult = await editingAgent.run(testProjectId);
+    // 8. Editing Agent Execution (FFmpeg Multi-Clip Composition Engine with Audio Ducking & Subtitles)
+    console.log('[TEST 8/11] Executing Agent 6: Editing Agent (Multi-Clip Concat, Audio Ducking & Subtitle Burn-In)...');
+    const editResult = await editingAgent.run(testProjectId, undefined, {
+      resolution: '720p',
+      fps: 30,
+      enableSubtitles: true,
+      subtitleFontSize: 24,
+      bgMusicVolume: 0.15,
+      voiceVolume: 1.0,
+    });
     const projectAfterEdit = await prisma.videoProject.findUnique({ where: { id: testProjectId } });
     console.log(`✓ Editing Agent completed:`);
     console.log(`  - Final Master Video Path: ${projectAfterEdit?.finalVideoPath}`);
     console.log(`  - Final Video URL: ${projectAfterEdit?.finalVideoUrl}`);
-    console.log(`  - Exists on Disk: ${fs.existsSync(projectAfterEdit?.finalVideoPath || '')}\n`);
+    console.log(`  - Subtitles SRT URL: ${editResult.data.subtitlesUrl}`);
+    console.log(`  - Subtitles VTT URL: ${editResult.data.subtitlesVttUrl}`);
+    console.log(`  - Master MP4 Exists on Disk: ${fs.existsSync(projectAfterEdit?.finalVideoPath || '')}\n`);
 
     // 9. Thumbnail Agent Execution
     console.log('[TEST 9/11] Executing Agent 7: Thumbnail Agent...');

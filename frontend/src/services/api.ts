@@ -105,6 +105,10 @@ export const renderService = {
     const res = await api.get(`/renders/status/${renderId}`);
     return res.data.data;
   },
+  getSubtitles: async (projectId: string): Promise<GeneratedAsset> => {
+    const res = await api.get(`/renders/subtitles/${projectId}`);
+    return res.data.data;
+  },
 };
 
 export const youtubeService = {

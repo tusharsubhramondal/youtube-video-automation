@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '../services/prisma.service.js';
 import { addJob } from '../services/queue.service.js';
 import { editingAgent } from '../agents/editing.agent.js';
+import fs from 'fs';
 
 const router = Router();
 
@@ -9,7 +10,16 @@ const router = Router();
 router.post('/start/:projectId', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { projectId } = req.params;
-    const { resolution, fps, backgroundMusicPath, bgMusicVolume, voiceVolume } = req.body;
+    const {
+      resolution,
+      fps,
+      enableSubtitles,
+      subtitleFontSize,
+      subtitleColor,
+      backgroundMusicPath,
+      bgMusicVolume,
+      voiceVolume,
+    } = req.body;
 
     const project = await prisma.videoProject.findUnique({
       where: { id: projectId },
@@ -34,13 +44,16 @@ router.post('/start/:projectId', async (req: Request, res: Response, next: NextF
       },
     });
 
-    // Dispatch background render
+    // Dispatch background render with full options
     await addJob('video-renders', `render-${projectId}`, {
       renderId: renderRecord.id,
       projectId,
       resolution: renderRecord.resolution,
       fps: renderRecord.fps,
       aspectRatio: renderRecord.aspectRatio,
+      enableSubtitles: enableSubtitles ?? project.settings?.enableSubtitles ?? true,
+      subtitleFontSize: subtitleFontSize ?? project.settings?.subtitleFontSize ?? 24,
+      subtitleColor: subtitleColor ?? project.settings?.subtitleColor ?? '#FFFFFF',
       bgMusicVolume: bgMusicVolume ?? project.settings?.backgroundMusicVolume ?? 0.15,
       voiceVolume: voiceVolume ?? project.settings?.voiceVolume ?? 1.0,
       backgroundMusicPath,
@@ -74,5 +87,23 @@ router.get('/status/:renderId', async (req: Request, res: Response, next: NextFu
   }
 });
 
-export default router;
+// Get latest subtitle asset for project
+router.get('/subtitles/:projectId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { projectId } = req.params;
+    const subtitleAsset = await prisma.generatedAsset.findFirst({
+      where: { projectId, type: 'SUBTITLE' },
+      orderBy: { createdAt: 'desc' },
+    });
 
+    if (!subtitleAsset) {
+      return res.status(404).json({ success: false, error: 'No subtitles found for this project' });
+    }
+
+    res.json({ success: true, data: subtitleAsset });
+  } catch (error) {
+    next(error);
+  }
+});
+
+export default router;

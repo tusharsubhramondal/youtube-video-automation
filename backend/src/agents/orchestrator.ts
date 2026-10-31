@@ -37,7 +37,7 @@ export class MasterOrchestrator {
       case 'VOICE':
         return await voiceAgent.run(projectId, payload?.sceneId);
       case 'EDITING':
-        return await editingAgent.run(projectId, payload?.renderId);
+        return await editingAgent.run(projectId, payload?.renderId, payload);
       case 'THUMBNAIL':
         return await thumbnailAgent.run(projectId, payload?.customPrompt);
       case 'SEO':

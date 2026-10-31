@@ -10,9 +10,12 @@ import {
   CheckCircle2,
   Sliders,
   Clock,
+  Subtitles,
+  FileText,
+  Volume2,
 } from 'lucide-react';
 import { projectService, renderService } from '../services/api';
-import { VideoProject, VideoRender } from '../types';
+import { VideoProject, VideoRender, GeneratedAsset } from '../types';
 import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
@@ -23,9 +26,13 @@ export const VideoPreview: React.FC = () => {
   const [projectId] = useState<string>(id || localStorage.getItem('activeProjectId') || '');
   const [project, setProject] = useState<VideoProject | null>(null);
   const [activeRender, setActiveRender] = useState<VideoRender | null>(null);
+  const [subtitleAsset, setSubtitleAsset] = useState<GeneratedAsset | null>(null);
   const [isRendering, setIsRendering] = useState(false);
   const [resolution, setResolution] = useState('1080p');
   const [fps, setFps] = useState(30);
+  const [enableSubtitles, setEnableSubtitles] = useState(true);
+  const [subtitleFontSize, setSubtitleFontSize] = useState(24);
+  const [subtitleColor, setSubtitleColor] = useState('#FFFFFF');
   const [bgMusicVol, setBgMusicVol] = useState(0.15);
   const [voiceVol, setVoiceVol] = useState(1.0);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,6 +40,7 @@ export const VideoPreview: React.FC = () => {
   useEffect(() => {
     if (projectId) {
       loadProject();
+      loadSubtitles();
     }
   }, [projectId]);
 
@@ -44,10 +52,28 @@ export const VideoPreview: React.FC = () => {
       if (data.renders && data.renders.length > 0) {
         setActiveRender(data.renders[0]);
       }
+      if (data.settings) {
+        setResolution(data.settings.resolution || '1080p');
+        setFps(data.settings.fps || 30);
+        setEnableSubtitles(data.settings.enableSubtitles ?? true);
+        setSubtitleFontSize(data.settings.subtitleFontSize || 24);
+        setSubtitleColor(data.settings.subtitleColor || '#FFFFFF');
+        setBgMusicVol(data.settings.backgroundMusicVolume ?? 0.15);
+        setVoiceVol(data.settings.voiceVolume ?? 1.0);
+      }
     } catch (err) {
       console.error('Failed to load project preview:', err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadSubtitles = async () => {
+    try {
+      const sub = await renderService.getSubtitles(projectId);
+      setSubtitleAsset(sub);
+    } catch {
+      // Subtitle asset may not be created yet
     }
   };
 
@@ -58,6 +84,9 @@ export const VideoPreview: React.FC = () => {
       const renderRecord = await renderService.triggerRender(projectId, {
         resolution,
         fps,
+        enableSubtitles,
+        subtitleFontSize,
+        subtitleColor,
         bgMusicVolume: bgMusicVol,
         voiceVolume: voiceVol,
       });
@@ -72,6 +101,7 @@ export const VideoPreview: React.FC = () => {
             clearInterval(pollInterval);
             setIsRendering(false);
             await loadProject();
+            await loadSubtitles();
           }
         } catch {
           clearInterval(pollInterval);
@@ -90,6 +120,7 @@ export const VideoPreview: React.FC = () => {
   }
 
   const isShorts = project.format === 'SHORTS';
+  const vttUrl = subtitleAsset?.url ? subtitleAsset.url.replace('.srt', '.vtt') : null;
 
   return (
     <div className="space-y-6">
@@ -99,13 +130,27 @@ export const VideoPreview: React.FC = () => {
           <div className="flex items-center gap-2 mb-1">
             <Film className="w-5 h-5 text-brand-400" />
             <h1 className="text-2xl font-bold text-white tracking-tight">Final Video Preview & Render</h1>
+            <Badge variant={isShorts ? 'purple' : 'info'}>
+              {isShorts ? '9:16 Shorts' : '16:9 Landscape'}
+            </Badge>
           </div>
           <p className="text-xs text-slate-400">
-            FFmpeg multi-clip composition engine with audio sync, transitions, and export
+            FFmpeg multi-clip engine with audio ducking, synchronized subtitles, and 1080p rendering
           </p>
         </div>
 
         <div className="flex items-center gap-3">
+          {subtitleAsset && (
+            <a
+              href={subtitleAsset.url}
+              download
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition-colors"
+            >
+              <FileText className="w-3.5 h-3.5 text-brand-400" />
+              Download Subtitles (.SRT)
+            </a>
+          )}
+
           {project.finalVideoUrl && (
             <a
               href={project.finalVideoUrl}
@@ -142,7 +187,17 @@ export const VideoPreview: React.FC = () => {
                   controls
                   autoPlay
                   className="w-full h-full object-contain"
-                />
+                >
+                  {vttUrl && (
+                    <track
+                      kind="subtitles"
+                      src={vttUrl}
+                      srcLang="en"
+                      label="English"
+                      default
+                    />
+                  )}
+                </video>
               </div>
             ) : (
               <div className="text-center p-8 space-y-3">
@@ -151,7 +206,7 @@ export const VideoPreview: React.FC = () => {
                 </div>
                 <h3 className="text-lg font-bold text-white">Video Not Yet Rendered</h3>
                 <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                  Click the Render button on the right to compile all scene clips, narration tracks, and background music into a master MP4.
+                  Click the Render button to compile all scene clips, voiceover tracks, background music, and subtitles into a master MP4.
                 </p>
                 <Button
                   variant="primary"
@@ -171,7 +226,7 @@ export const VideoPreview: React.FC = () => {
               <div className="flex items-center justify-between text-xs">
                 <span className="font-semibold text-white flex items-center gap-2">
                   <Clock className="w-4 h-4 text-brand-400 animate-spin" />
-                  FFmpeg Rendering in Progress...
+                  FFmpeg Multi-Track Composition in Progress...
                 </span>
                 <span className="font-mono text-brand-300 font-bold">{activeRender.progress || 0}%</span>
               </div>
@@ -190,7 +245,7 @@ export const VideoPreview: React.FC = () => {
           <Card className="space-y-4">
             <h3 className="font-semibold text-white text-sm border-b border-slate-800 pb-2 flex items-center gap-2">
               <Sliders className="w-4 h-4 text-brand-400" />
-              Render Settings
+              Render & Subtitle Settings
             </h3>
 
             <div className="space-y-3 text-xs">
@@ -218,10 +273,57 @@ export const VideoPreview: React.FC = () => {
                 </select>
               </div>
 
+              {/* Subtitles Customization */}
+              <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-lg space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="font-semibold text-white flex items-center gap-1.5 cursor-pointer">
+                    <Subtitles className="w-3.5 h-3.5 text-brand-400" />
+                    Burn-In Subtitles
+                  </label>
+                  <input
+                    type="checkbox"
+                    checked={enableSubtitles}
+                    onChange={(e) => setEnableSubtitles(e.target.checked)}
+                    className="w-4 h-4 accent-brand-500 rounded cursor-pointer"
+                  />
+                </div>
+
+                {enableSubtitles && (
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div>
+                      <span className="text-slate-400 block mb-1">Font Size</span>
+                      <select
+                        value={subtitleFontSize}
+                        onChange={(e) => setSubtitleFontSize(Number(e.target.value))}
+                        className="w-full bg-slate-900 border border-slate-800 rounded p-1.5 text-xs text-white"
+                      >
+                        <option value={18}>Small (18pt)</option>
+                        <option value={24}>Medium (24pt)</option>
+                        <option value={30}>Large (30pt)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 block mb-1">Text Color</span>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="color"
+                          value={subtitleColor}
+                          onChange={(e) => setSubtitleColor(e.target.value)}
+                          className="w-7 h-7 rounded bg-transparent cursor-pointer border border-slate-800"
+                        />
+                        <span className="font-mono text-[10px] text-slate-300">{subtitleColor}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Audio Mixing & Ducking */}
               <div>
                 <div className="flex justify-between text-slate-300 mb-1">
-                  <span>Voice Volume</span>
-                  <span className="font-mono">{Math.round(voiceVol * 100)}%</span>
+                  <span>Voice Narration Volume</span>
+                  <span className="font-mono font-bold text-white">{Math.round(voiceVol * 100)}%</span>
                 </div>
                 <input
                   type="range"
@@ -237,7 +339,7 @@ export const VideoPreview: React.FC = () => {
               <div>
                 <div className="flex justify-between text-slate-300 mb-1">
                   <span>Background Music Ducking</span>
-                  <span className="font-mono">{Math.round(bgMusicVol * 100)}%</span>
+                  <span className="font-mono font-bold text-white">{Math.round(bgMusicVol * 100)}%</span>
                 </div>
                 <input
                   type="range"

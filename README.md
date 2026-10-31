@@ -14,7 +14,7 @@ An enterprise-grade, modular, production-ready AI-powered YouTube video automati
   3. **Image Agent**: Automated visual synthesis matching styles (Cinematic, Cyberpunk, Photorealistic, Anime).
   4. **Video Agent**: Dynamic Ken Burns pan/zoom motion camera synthesis turning scene images into MP4 clips.
   5. **Voice Agent**: Spoken voiceover narration audio generation with automatic duration synchronization.
-  6. **Editing Agent**: Multi-track FFmpeg composition engine, multi-clip concat, background music ducking, and MP4 rendering.
+  6. **Editing Agent**: Multi-track FFmpeg composition engine, multi-clip concat, background music ducking, synchronized `.srt` and `.vtt` subtitle generation, and styled burnt-in subtitle rendering.
   7. **Thumbnail Agent**: High-CTR thumbnail concept generation with psychological text overlays.
   8. **SEO Agent**: Viral title variations (CTR scored), rich timestamped descriptions, and search tag clouds.
   9. **Publishing Agent**: Google OAuth 2.0 integration with YouTube Data API v3 (*Mandatory explicit user approval safety gate*).

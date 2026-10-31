@@ -50,7 +50,16 @@ export async function startServer() {
   // Register background video rendering worker
   registerWorker('video-renders', async (data: any) => {
     logger.info(`Starting background video render task for project ${data.projectId}, render ${data.renderId}`);
-    return await editingAgent.run(data.projectId, data.renderId);
+    return await editingAgent.run(data.projectId, data.renderId, {
+      resolution: data.resolution,
+      fps: data.fps,
+      enableSubtitles: data.enableSubtitles,
+      subtitleFontSize: data.subtitleFontSize,
+      subtitleColor: data.subtitleColor,
+      bgMusicVolume: data.bgMusicVolume,
+      voiceVolume: data.voiceVolume,
+      backgroundMusicPath: data.backgroundMusicPath,
+    });
   });
 
   const server = app.listen(config.port, () => {
