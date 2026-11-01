@@ -13,7 +13,8 @@ export async function getLLMProvider(): Promise<LLMProvider> {
     });
     if (dbProvider && dbProvider.isEnabled && dbProvider.apiKey) {
       logger.info('Using Gemini LLM provider configured from database');
-      return new GeminiProvider(dbProvider.apiKey, dbProvider.modelName || 'gemini-1.5-flash');
+      const model = dbProvider.modelName && !dbProvider.modelName.includes('1.5') ? dbProvider.modelName : 'gemini-3.5-flash-lite';
+      return new GeminiProvider(dbProvider.apiKey, model);
     }
   } catch (err) {
     // If DB is offline or table empty, fallback to env config
@@ -22,7 +23,7 @@ export async function getLLMProvider(): Promise<LLMProvider> {
   // Check if Gemini is configured in environment variables
   if (config.ai.geminiApiKey) {
     logger.info('Using Gemini LLM provider configured from environment');
-    return new GeminiProvider(config.ai.geminiApiKey);
+    return new GeminiProvider(config.ai.geminiApiKey, 'gemini-3.5-flash-lite');
   }
 
   // Fallback to high quality mock provider

@@ -24,7 +24,7 @@ import { VoiceProfile } from '../types';
 export const ProviderSettings: React.FC = () => {
   const [settings, setSettings] = useState<any>(null);
   const [geminiKey, setGeminiKey] = useState('');
-  const [geminiModel, setGeminiModel] = useState('gemini-1.5-flash');
+  const [geminiModel, setGeminiModel] = useState('gemini-3.5-flash');
   const [openAiKey, setOpenAiKey] = useState('');
   const [elevenLabsKey, setElevenLabsKey] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -221,9 +221,11 @@ export const ProviderSettings: React.FC = () => {
               onChange={(e) => setGeminiModel(e.target.value)}
               className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white"
             >
-              <option value="gemini-1.5-flash">gemini-1.5-flash (Fast & Highly Capable)</option>
-              <option value="gemini-1.5-pro">gemini-1.5-pro (In-depth Complex Reasoning)</option>
-              <option value="gemini-2.0-flash-exp">gemini-2.0-flash-exp (Experimental Next-Gen)</option>
+              <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Recommended • High Speed & Stability)</option>
+              <option value="gemini-3.5-flash">gemini-3.5-flash (High Capacity Flash)</option>
+              <option value="gemini-3.7-flash">gemini-3.7-flash (Latest Fast Model)</option>
+              <option value="gemini-3.8-flash">gemini-3.8-flash (Flagship Advanced Reasoning)</option>
+              <option value="gemini-2.5-pro">gemini-2.5-pro (In-depth Complex Reasoning)</option>
             </select>
           </div>
 

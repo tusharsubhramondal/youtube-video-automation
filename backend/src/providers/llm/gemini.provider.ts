@@ -7,7 +7,7 @@ export class GeminiProvider implements LLMProvider {
   private genAI: GoogleGenerativeAI;
   private modelName: string;
 
-  constructor(apiKey: string, modelName = 'gemini-1.5-flash') {
+  constructor(apiKey: string, modelName = 'gemini-3.5-flash-lite') {
     this.genAI = new GoogleGenerativeAI(apiKey);
     this.modelName = modelName;
   }
@@ -16,13 +16,41 @@ export class GeminiProvider implements LLMProvider {
     return text.replace(/```json/gi, '').replace(/```/g, '').trim();
   }
 
+  private async executeWithModelFallback(prompt: string): Promise<string> {
+    const candidateModels = Array.from(
+      new Set([
+        this.modelName,
+        'gemini-3.5-flash-lite',
+        'gemini-3.5-flash',
+        'gemini-3.7-flash',
+        'gemini-3.8-flash',
+      ])
+    ).filter(Boolean);
+
+    let lastError: any = null;
+
+    for (const model of candidateModels) {
+      try {
+        const generativeModel = this.genAI.getGenerativeModel({
+          model,
+          generationConfig: { responseMimeType: 'application/json' },
+        });
+
+        const response = await generativeModel.generateContent(prompt);
+        const rawText = response.response.text();
+        this.modelName = model; // Cache working model for subsequent agent calls
+        return rawText;
+      } catch (err: any) {
+        lastError = err;
+        logger.warn(`Gemini model "${model}" failed (${err.message?.substring(0, 80)}). Trying fallback model...`);
+      }
+    }
+
+    throw lastError;
+  }
+
   async generateResearch(topic: string, category: string, language: string): Promise<ResearchResult> {
     try {
-      const model = this.genAI.getGenerativeModel({
-        model: this.modelName,
-        generationConfig: { responseMimeType: 'application/json' },
-      });
-
       const prompt = `You are an expert YouTube Content Strategist and Research Agent.
 Conduct comprehensive research for a high-performing YouTube video on the following topic:
 Topic: "${topic}"
@@ -44,8 +72,7 @@ Return a valid JSON object matching this schema:
   "hooks": string[] (3 captivating intro hook variations)
 }`;
 
-      const response = await model.generateContent(prompt);
-      const rawText = response.response.text();
+      const rawText = await this.executeWithModelFallback(prompt);
       return JSON.parse(this.cleanJson(rawText)) as ResearchResult;
     } catch (err) {
       logger.error('Gemini generateResearch error:', err);
@@ -63,11 +90,6 @@ Return a valid JSON object matching this schema:
     language: string;
   }): Promise<ScriptResult> {
     try {
-      const model = this.genAI.getGenerativeModel({
-        model: this.modelName,
-        generationConfig: { responseMimeType: 'application/json' },
-      });
-
       const isShorts = params.format === 'SHORTS';
       const sceneCount = isShorts
         ? Math.max(3, Math.round(params.targetDuration / 5))
@@ -105,8 +127,7 @@ Return a valid JSON object matching this exact schema:
   "totalEstimatedDuration": number
 }`;
 
-      const response = await model.generateContent(prompt);
-      const rawText = response.response.text();
+      const rawText = await this.executeWithModelFallback(prompt);
       return JSON.parse(this.cleanJson(rawText)) as ScriptResult;
     } catch (err) {
       logger.error('Gemini generateScript error:', err);
@@ -126,11 +147,6 @@ Return a valid JSON object matching this exact schema:
     thumbnailTextIdeas: string[];
   }> {
     try {
-      const model = this.genAI.getGenerativeModel({
-        model: this.modelName,
-        generationConfig: { responseMimeType: 'application/json' },
-      });
-
       const prompt = `You are a YouTube SEO Master.
 Generate hyper-optimized YouTube metadata for this video:
 Topic: "${params.topic}"
@@ -147,8 +163,7 @@ Return valid JSON with:
   "thumbnailTextIdeas": string[] (4 punchy 2-4 word phrases to put on the thumbnail image)
 }`;
 
-      const response = await model.generateContent(prompt);
-      const rawText = response.response.text();
+      const rawText = await this.executeWithModelFallback(prompt);
       return JSON.parse(this.cleanJson(rawText));
     } catch (err) {
       logger.error('Gemini generateSeoMetadata error:', err);
@@ -162,11 +177,6 @@ Return valid JSON with:
     overlayText: string;
   }> {
     try {
-      const model = this.genAI.getGenerativeModel({
-        model: this.modelName,
-        generationConfig: { responseMimeType: 'application/json' },
-      });
-
       const prompt = `You are a viral YouTube Thumbnail Designer.
 Generate a thumbnail concept for:
 Topic: "${topic}"
@@ -179,8 +189,7 @@ Return valid JSON:
   "overlayText": string (2 to 4 bold words to overlay on thumbnail)
 }`;
 
-      const response = await model.generateContent(prompt);
-      const rawText = response.response.text();
+      const rawText = await this.executeWithModelFallback(prompt);
       return JSON.parse(this.cleanJson(rawText));
     } catch (err) {
       logger.error('Gemini generateThumbnailPrompt error:', err);
