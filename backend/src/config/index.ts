@@ -8,9 +8,10 @@ const ROOT_DIR = process.cwd();
 const UPLOAD_DIR = path.resolve(process.env.UPLOAD_DIR || path.join(ROOT_DIR, 'uploads'));
 const RENDER_DIR = path.resolve(process.env.RENDER_DIR || path.join(ROOT_DIR, 'renders'));
 const TEMP_DIR = path.resolve(path.join(ROOT_DIR, 'temp'));
+const VOICE_DIR = path.resolve(path.join(UPLOAD_DIR, 'voices'));
 
 // Ensure storage directories exist
-[UPLOAD_DIR, RENDER_DIR, TEMP_DIR].forEach((dir) => {
+[UPLOAD_DIR, RENDER_DIR, TEMP_DIR, VOICE_DIR].forEach((dir) => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -42,6 +43,7 @@ export const config = {
     uploadDir: UPLOAD_DIR,
     renderDir: RENDER_DIR,
     tempDir: TEMP_DIR,
+    voiceDir: VOICE_DIR,
   },
 };
 

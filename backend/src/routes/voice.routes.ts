@@ -3,6 +3,7 @@ import { prisma } from '../services/prisma.service.js';
 import { getTTSProvider } from '../providers/tts/index.js';
 import { config } from '../config/index.js';
 import path from 'path';
+import fs from 'fs';
 
 const router = Router();
 
@@ -123,7 +124,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-// Synthesize preview sample for voice profile
+// Synthesize preview sample for voice profile (stored in isolated voices/ folder)
 router.post('/:id/preview', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
@@ -133,9 +134,37 @@ router.post('/:id/preview', async (req: Request, res: Response, next: NextFuncti
       return res.status(404).json({ success: false, error: 'Voice profile not found' });
     }
 
-    const previewText = `Hello! This is a preview of the ${voice.name} voice profile in AutoTube Studio.`;
-    const filename = `voice_preview_${voice.id}_${Date.now()}.mp3`;
-    const outputPath = path.join(config.storage.uploadDir, filename);
+    const voiceDir = config.storage.voiceDir;
+    if (!fs.existsSync(voiceDir)) {
+      fs.mkdirSync(voiceDir, { recursive: true });
+    }
+
+    // Stable, isolated preview filename per voice (safe from project asset cleanups)
+    const safeVoiceId = (voice.voiceId || voice.name).replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filename = `${safeVoiceId}.mp3`;
+    const outputPath = path.join(voiceDir, filename);
+    const publicUrl = `/uploads/voices/${filename}`;
+
+    // If already generated and healthy, reuse cached audio immediately
+    if (fs.existsSync(outputPath) && fs.statSync(outputPath).size > 1000) {
+      if (voice.sampleUrl !== publicUrl) {
+        await prisma.voiceProfile.update({
+          where: { id: voice.id },
+          data: { sampleUrl: publicUrl },
+        });
+      }
+      return res.json({
+        success: true,
+        data: {
+          url: publicUrl,
+          localPath: outputPath,
+          durationSeconds: 5.0,
+          sampleUrl: publicUrl,
+        },
+      });
+    }
+
+    const previewText = `Hello! This is a preview of the ${voice.name} voice in AutoTube Studio.`;
 
     const tts = getTTSProvider();
     const result = await tts.generateSpeech({
@@ -148,10 +177,18 @@ router.post('/:id/preview', async (req: Request, res: Response, next: NextFuncti
     // Save sampleUrl in database
     await prisma.voiceProfile.update({
       where: { id: voice.id },
-      data: { sampleUrl: result.url },
+      data: { sampleUrl: publicUrl },
     });
 
-    res.json({ success: true, data: { ...result, sampleUrl: result.url } });
+    res.json({
+      success: true,
+      data: {
+        ...result,
+        url: publicUrl,
+        localPath: outputPath,
+        sampleUrl: publicUrl,
+      },
+    });
   } catch (error) {
     next(error);
   }
