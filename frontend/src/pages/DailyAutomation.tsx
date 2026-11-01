@@ -211,25 +211,30 @@ export const DailyAutomation: React.FC = () => {
                 <label className="text-slate-300 block font-medium mb-1.5">Target Content Niche / Channel Theme</label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
                   {[
-                    'Tech & AI Facts',
-                    'Mindblowing Science',
-                    'Strange History Facts',
-                    'Money & Wealth Hacks',
+                    { label: 'Comedy & Relatable Skits', icon: '🎭' },
+                    { label: 'Dance & Viral Choreography', icon: '💃' },
+                    { label: 'Tech & AI Facts', icon: '🤖' },
+                    { label: 'Entertainment & Celebs', icon: '🎬' },
+                    { label: 'Mindblowing Science', icon: '🔬' },
+                    { label: 'Strange History Facts', icon: '📜' },
+                    { label: 'Money & Wealth Hacks', icon: '💰' },
+                    { label: 'Fitness & Workout Motivation', icon: '⚡' },
                   ].map((preset) => (
                     <button
-                      key={preset}
+                      key={preset.label}
                       type="button"
                       onClick={() => {
-                        setNiche(preset);
-                        loadTrends(preset);
+                        setNiche(preset.label);
+                        loadTrends(preset.label);
                       }}
-                      className={`p-2 rounded-lg border text-left transition-all ${
-                        niche === preset
+                      className={`p-2.5 rounded-lg border text-left transition-all flex items-center gap-2 ${
+                        niche === preset.label
                           ? 'bg-brand-600/20 border-brand-500 text-brand-300 font-medium'
                           : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
                       }`}
                     >
-                      {preset}
+                      <span className="text-sm">{preset.icon}</span>
+                      <span className="truncate">{preset.label}</span>
                     </button>
                   ))}
                 </div>
@@ -237,7 +242,7 @@ export const DailyAutomation: React.FC = () => {
                   type="text"
                   value={niche}
                   onChange={(e) => setNiche(e.target.value)}
-                  placeholder="e.g. Psychology Facts, Daily Architecture Curiosities..."
+                  placeholder="Or type custom niche: e.g. Standup Comedy, Hip Hop Dance, Bollywood Trends..."
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white focus:ring-1 focus:ring-brand-500 font-medium"
                 />
               </div>
@@ -442,3 +447,4 @@ export const DailyAutomation: React.FC = () => {
     </div>
   );
 };
+

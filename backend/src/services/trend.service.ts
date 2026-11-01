@@ -136,15 +136,101 @@ Return ONLY JSON array.`;
 
   private resolveSubreddit(niche: string): string {
     const lower = niche.toLowerCase();
+    if (lower.includes('comedy') || lower.includes('humor') || lower.includes('joke') || lower.includes('funny') || lower.includes('meme')) return 'memes';
+    if (lower.includes('dance') || lower.includes('choreograph')) return 'Dance';
+    if (lower.includes('music') || lower.includes('song')) return 'Music';
+    if (lower.includes('entertainment') || lower.includes('pop culture') || lower.includes('celeb') || lower.includes('drama')) return 'popculture';
+    if (lower.includes('gaming') || lower.includes('gameplay')) return 'gaming';
+    if (lower.includes('fitness') || lower.includes('workout') || lower.includes('gym')) return 'fitness';
     if (lower.includes('tech') || lower.includes('ai') || lower.includes('software')) return 'technology';
     if (lower.includes('science') || lower.includes('space') || lower.includes('physics')) return 'science';
     if (lower.includes('history') || lower.includes('ancient')) return 'todayilearned';
-    if (lower.includes('money') || lower.includes('finance') || lower.includes('business')) return 'wallstreetbets';
-    if (lower.includes('health') || lower.includes('fitness')) return 'fitness';
+    if (lower.includes('money') || lower.includes('finance') || lower.includes('business') || lower.includes('wealth')) return 'wallstreetbets';
     return 'todayilearned';
   }
 
   private getCuratedFallbackTrends(niche: string): TrendingCandidate[] {
+    const lower = niche.toLowerCase();
+
+    if (lower.includes('comedy') || lower.includes('humor') || lower.includes('funny') || lower.includes('meme')) {
+      return [
+        {
+          title: 'The Relatable Lie Everyone Tells Daily',
+          hookAngle: 'Tell me you do this without telling me you do this... why does everybody panic when someone knocks on the door?',
+          source: 'Curated Viral Signals',
+          viralScore: 97,
+          category: niche,
+          summary: 'A fast-paced relatable observational humor reel about modern everyday awkward moments.',
+        },
+        {
+          title: 'Expectation vs Reality: Working From Home',
+          hookAngle: 'What people think working from home looks like versus what actually happens at 2:15 PM on a Tuesday...',
+          source: 'Curated Viral Signals',
+          viralScore: 95,
+          category: niche,
+          summary: 'A hilarious skit-style breakdown of remote work truths with punchy timing.',
+        },
+        {
+          title: 'The 3 Types of People at Every Family Dinner',
+          hookAngle: 'Every family has these exact three people at the dinner table, and person number two is definitely you...',
+          source: 'Curated Viral Signals',
+          viralScore: 94,
+          category: niche,
+          summary: 'Relatable family dynamic comedy that drives immediate comment-section tagging.',
+        },
+      ];
+    }
+
+    if (lower.includes('dance') || lower.includes('choreograph')) {
+      return [
+        {
+          title: 'The Viral 10-Second Footwork Challenge',
+          hookAngle: 'This footwork move looks 10x harder than it actually is. Here is the 3-step cheat code to nail it today...',
+          source: 'Curated Viral Signals',
+          viralScore: 98,
+          category: niche,
+          summary: 'Step-by-step breakdown of trending viral choreography with beat drops and visual cues.',
+        },
+        {
+          title: 'How This Iconic Dance Move Was Invented',
+          hookAngle: 'The real secret behind how the Moonwalk and smooth anti-gravity lean were actually created will blow your mind...',
+          source: 'Curated Viral Signals',
+          viralScore: 96,
+          category: niche,
+          summary: 'Behind-the-scenes history of world-famous choreography with performance insights.',
+        },
+        {
+          title: 'Street Style vs Studio Dance: The Real Difference',
+          hookAngle: 'Most dancers don’t realize this tiny posture change is what gives street dance that effortless groove...',
+          source: 'Curated Viral Signals',
+          viralScore: 93,
+          category: niche,
+          summary: 'Quick technique comparison reel with high visual replay value.',
+        },
+      ];
+    }
+
+    if (lower.includes('entertainment') || lower.includes('pop culture')) {
+      return [
+        {
+          title: 'The Crazy Movie Scene That Was Never In The Script',
+          hookAngle: 'This famous line in cinema history was completely unscripted, and the director’s reaction made it into the final cut...',
+          source: 'Curated Viral Signals',
+          viralScore: 96,
+          category: niche,
+          summary: 'Unbelievable behind-the-scenes movie trivia that hooks pop-culture fans.',
+        },
+        {
+          title: 'The Hidden Easter Egg You Walked Past 100 Times',
+          hookAngle: 'Almost everyone missed this subtle background detail that completely changes the meaning of the ending...',
+          source: 'Curated Viral Signals',
+          viralScore: 94,
+          category: niche,
+          summary: 'Pop culture fan theories and visual easter eggs that prompt debates.',
+        },
+      ];
+    }
+
     return [
       {
         title: 'The AI Breakthrough Nobody Is Talking About',
@@ -175,3 +261,4 @@ Return ONLY JSON array.`;
 }
 
 export const trendDiscoveryService = new TrendDiscoveryService();
+

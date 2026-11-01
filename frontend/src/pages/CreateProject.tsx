@@ -77,9 +77,11 @@ export const CreateProject: React.FC = () => {
 
   const categories = [
     'Technology & AI',
+    'Comedy & Humor',
+    'Dance & Performance',
+    'Entertainment',
     'Education & Science',
     'Finance & Crypto',
-    'Entertainment',
     'Health & Fitness',
     'Gaming',
     'Motivation & Self-Improvement',
