@@ -7,9 +7,17 @@ export class GeminiProvider implements LLMProvider {
   private genAI: GoogleGenerativeAI;
   private modelName: string;
 
-  constructor(apiKey: string, modelName = 'gemini-3.5-flash-lite') {
+  constructor(apiKey: string, modelName = 'gemini-2.0-flash') {
     this.genAI = new GoogleGenerativeAI(apiKey);
-    this.modelName = modelName;
+    // Sanitize any legacy or fictitious model names stored in DB
+    this.modelName = this.sanitizeModelName(modelName);
+  }
+
+  private sanitizeModelName(name?: string): string {
+    if (!name || name.startsWith('gemini-3') || name.startsWith('gemini-2.5')) {
+      return 'gemini-2.0-flash';
+    }
+    return name;
   }
 
   private cleanJson(text: string): string {
@@ -19,11 +27,10 @@ export class GeminiProvider implements LLMProvider {
   private async executeWithModelFallback(prompt: string): Promise<string> {
     const candidateModels = Array.from(
       new Set([
-        this.modelName,
-        'gemini-3.5-flash-lite',
-        'gemini-3.5-flash',
-        'gemini-3.7-flash',
-        'gemini-3.8-flash',
+        this.sanitizeModelName(this.modelName),
+        'gemini-2.0-flash',
+        'gemini-1.5-flash',
+        'gemini-1.5-pro',
       ])
     ).filter(Boolean);
 

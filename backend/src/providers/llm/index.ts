@@ -23,12 +23,12 @@ export async function getAgentRouting(): Promise<Record<string, AgentRoutingConf
     logger.warn(`Failed to read agent routing: ${err.message}`);
   }
 
-  // Default sensible routing
+  // Default sensible routing with official Google Gemini 2.0 Flash
   return {
-    RESEARCH: { provider: 'gemini', model: 'gemini-3.5-flash-lite' },
-    SCRIPT: { provider: 'gemini', model: 'gemini-3.5-flash-lite' },
-    SEO: { provider: 'gemini', model: 'gemini-3.5-flash-lite' },
-    THUMBNAIL: { provider: 'gemini', model: 'gemini-3.5-flash-lite' },
+    RESEARCH: { provider: 'gemini', model: 'gemini-2.0-flash' },
+    SCRIPT: { provider: 'gemini', model: 'gemini-2.0-flash' },
+    SEO: { provider: 'gemini', model: 'gemini-2.0-flash' },
+    THUMBNAIL: { provider: 'gemini', model: 'gemini-2.0-flash' },
   };
 }
 
@@ -53,7 +53,8 @@ export async function getLLMProvider(agentType?: string): Promise<LLMProvider> {
     const dbGemini = await prisma.aIProvider.findUnique({ where: { providerKey: 'gemini' } }).catch(() => null);
     const apiKey = dbGemini?.apiKey || config.ai.geminiApiKey || process.env.GEMINI_API_KEY;
     if (apiKey) {
-      const model = target.model || dbGemini?.modelName || 'gemini-3.5-flash-lite';
+      let model = target.model || dbGemini?.modelName || 'gemini-2.0-flash';
+      if (model.startsWith('gemini-3')) model = 'gemini-2.0-flash';
       logger.info(`[LLM Router] Routing ${agentType} Agent to Google Gemini (${model})`);
       return new GeminiProvider(apiKey, model);
     }
@@ -66,15 +67,16 @@ export async function getLLMProvider(agentType?: string): Promise<LLMProvider> {
       where: { providerKey: 'gemini' },
     });
     if (dbProvider?.isEnabled && dbProvider.apiKey) {
-      const model = dbProvider.modelName && !dbProvider.modelName.includes('1.5') ? dbProvider.modelName : 'gemini-3.5-flash-lite';
+      let model = dbProvider.modelName || 'gemini-2.0-flash';
+      if (model.startsWith('gemini-3')) model = 'gemini-2.0-flash';
       logger.info(`[LLM Router] Defaulting ${agentType || 'General'} to configured Gemini (${model})`);
       return new GeminiProvider(dbProvider.apiKey, model);
     }
   } catch {}
 
   if (config.ai.geminiApiKey) {
-    logger.info(`[LLM Router] Defaulting ${agentType || 'General'} to environment Gemini (gemini-3.5-flash-lite)`);
-    return new GeminiProvider(config.ai.geminiApiKey, 'gemini-3.5-flash-lite');
+    logger.info(`[LLM Router] Defaulting ${agentType || 'General'} to environment Gemini (gemini-2.0-flash)`);
+    return new GeminiProvider(config.ai.geminiApiKey, 'gemini-2.0-flash');
   }
 
   // 4. Fallback: Check if OpenAI is configured anywhere

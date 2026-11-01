@@ -26,7 +26,7 @@ An enterprise-grade, modular, production-ready AI-powered YouTube video automati
 
 - **Resilient Multi-Provider AI Architecture**:
   - **Dynamic Multi-LLM Router**:
-    - **Google Gemini**: Flagship & Flash models (`gemini-3.5-flash-lite`, `gemini-3.5-flash`, `gemini-3.7-flash`, `gemini-3.8-flash`, `gemini-2.5-pro`).
+    - **Google Gemini**: Flagship & Flash models (`gemini-2.0-flash`, `gemini-1.5-flash`, `gemini-1.5-pro`).
     - **OpenAI**: Flagship chat reasoning (`gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`, `o1-mini`).
     - **Per-Agent Routing Matrix**: Granular assignment of specific LLMs and engines per autonomous agent (e.g. GPT-4o for Scripting, Gemini Flash-Lite for Research/SEO).
   - **Images**: **100% Real Image Engine (Zero Mock Colored Boxes / SVGs)**:

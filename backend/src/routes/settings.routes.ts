@@ -6,11 +6,11 @@ import { checkFfmpegAvailable } from '../services/ffmpeg.service.js';
 const router = Router();
 
 const DEFAULT_ROUTING = {
-  RESEARCH: { provider: 'gemini', model: 'gemini-3.5-flash-lite' },
-  SCRIPT: { provider: 'gemini', model: 'gemini-3.5-flash-lite' },
+  RESEARCH: { provider: 'gemini', model: 'gemini-2.0-flash' },
+  SCRIPT: { provider: 'gemini', model: 'gemini-2.0-flash' },
   IMAGE: { provider: 'pollinations', model: 'flux' },
   THUMBNAIL: { provider: 'openai', model: 'dall-e-3' },
-  SEO: { provider: 'gemini', model: 'gemini-3.5-flash-lite' },
+  SEO: { provider: 'gemini', model: 'gemini-2.0-flash' },
   VOICE: { provider: 'edgetts', voiceId: 'en-US-ChristopherNeural' },
 };
 
