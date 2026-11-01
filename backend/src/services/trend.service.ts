@@ -23,26 +23,31 @@ export class TrendDiscoveryService {
     logger.info(`[TrendDiscovery] Searching daily viral trend signals for niche: "${niche}"...`);
     const rawSignals: string[] = [];
 
-    // 1. Fetch Reddit viral hot signals from relevant subreddits based on niche
+    // 1. Fetch Reddit viral hot signals via RSS feed
     try {
       const subreddit = this.resolveSubreddit(niche);
-      const redditUrl = `https://www.reddit.com/r/${subreddit}/hot.json?limit=12`;
-      const redditRes = await axios.get(redditUrl, {
+      const redditRssUrl = `https://www.reddit.com/r/${subreddit}/hot.rss`;
+      const redditRes = await axios.get(redditRssUrl, {
         headers: {
-          'User-Agent': 'AutoTube/1.0 (Trend Discovery Agent)',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+          'Accept': 'application/rss+xml, application/xml, text/xml, */*',
         },
-        timeout: 8000,
+        timeout: 6000,
       });
 
-      const posts = redditRes.data?.data?.children || [];
-      for (const p of posts) {
-        if (!p.data.stickied && p.data.score > 200 && p.data.title) {
-          rawSignals.push(`[Reddit: ${p.data.title}] (Score: ${p.data.score}, Comments: ${p.data.num_comments})`);
+      const entries = (redditRes.data as string).match(/<entry>[\s\S]*?<title>(.*?)<\/title>/g) || [];
+      for (const entry of entries.slice(0, 10)) {
+        const titleMatch = entry.match(/<title>(.*?)<\/title>/);
+        if (titleMatch && titleMatch[1]) {
+          const rawTitle = titleMatch[1].replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
+          if (rawTitle && !rawTitle.toLowerCase().startsWith('daily') && !rawTitle.toLowerCase().startsWith('weekly')) {
+            rawSignals.push(`[Reddit: ${rawTitle}]`);
+          }
         }
       }
       logger.info(`[TrendDiscovery] Extracted ${rawSignals.length} community signals from r/${subreddit}`);
     } catch (err: any) {
-      logger.warn(`[TrendDiscovery] Reddit signal fetch skipped: ${err.message}`);
+      logger.warn(`[TrendDiscovery] Reddit signal fetch skipped (${err.message})`);
     }
 
     // 2. Fetch Google Trends daily RSS feed (US / Global)
