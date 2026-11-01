@@ -47,7 +47,13 @@ export class CloudflareImageProvider implements ImageProvider {
     return null;
   }
 
-  async generateImage(options: ImageGenerationOptions): Promise<{ url: string; localPath: string }> {
+  async generateImage(options: ImageGenerationOptions): Promise<{
+    url: string;
+    localPath: string;
+    provider?: string;
+    model?: string;
+    fileSizeBytes?: number;
+  }> {
     const creds = await this.getCredentials();
     if (!creds || !creds.accountId || !creds.apiToken) {
       throw new Error(
@@ -65,7 +71,6 @@ export class CloudflareImageProvider implements ImageProvider {
         endpoint,
         {
           prompt: options.prompt,
-          num_steps: model.includes('flux') ? 4 : 8,
         },
         {
           headers: {
@@ -77,19 +82,47 @@ export class CloudflareImageProvider implements ImageProvider {
         }
       );
 
+      let imageBuffer: Buffer;
+      const rawBuffer = Buffer.from(response.data);
+      const rawText = rawBuffer.toString('utf-8');
+
+      if (rawText.startsWith('{')) {
+        try {
+          const json = JSON.parse(rawText);
+          if (json.result?.image) {
+            imageBuffer = Buffer.from(json.result.image, 'base64');
+          } else if (json.errors && json.errors.length > 0) {
+            throw new Error(json.errors.map((e: any) => e.message).join(', '));
+          } else {
+            imageBuffer = rawBuffer;
+          }
+        } catch (parseErr: any) {
+          if (parseErr.message && !parseErr.message.includes('JSON')) {
+            throw parseErr;
+          }
+          imageBuffer = rawBuffer;
+        }
+      } else {
+        imageBuffer = rawBuffer;
+      }
+
       const targetDir = path.dirname(options.outputPath);
       if (!fs.existsSync(targetDir)) {
         fs.mkdirSync(targetDir, { recursive: true });
       }
 
-      fs.writeFileSync(options.outputPath, Buffer.from(response.data));
+      fs.writeFileSync(options.outputPath, imageBuffer);
       const filename = path.basename(options.outputPath);
+      const fileSizeBytes = imageBuffer.length;
 
-      logger.info(`[CloudflareAI] Successfully generated image (${fs.statSync(options.outputPath).size} bytes): ${filename}`);
+      logger.info(`[CloudflareAI] Successfully generated image (${fileSizeBytes} bytes): ${filename}`);
 
       return {
         url: `/uploads/${filename}`,
         localPath: options.outputPath,
+        provider: `Cloudflare Workers AI (${model})`,
+        model,
+        fileSizeBytes,
       };
     } catch (err: any) {
       const errorMsg = err.response?.data
@@ -103,3 +136,4 @@ export class CloudflareImageProvider implements ImageProvider {
     }
   }
 }
+

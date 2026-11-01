@@ -70,6 +70,8 @@ export interface ImageProvider {
   generateImage(options: ImageGenerationOptions): Promise<{
     url: string;
     localPath: string;
+    provider?: string;
+    model?: string;
     fileSizeBytes?: number;
   }>;
 }

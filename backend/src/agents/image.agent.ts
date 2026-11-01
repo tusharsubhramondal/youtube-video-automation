@@ -65,7 +65,7 @@ export const imageAgent = {
             projectId,
             sceneId: scene.id,
             type: 'IMAGE',
-            provider: imageProvider.name,
+            provider: imgResult.provider || imageProvider.name,
             prompt: scene.visualPrompt,
             url: imgResult.url,
             localPath: imgResult.localPath,
@@ -97,7 +97,7 @@ export const imageAgent = {
           completedAt: new Date(),
           executionTimeMs: durationMs,
           outputPayload: JSON.stringify(results),
-          logs: `Generated ${results.length} scene images in ${durationMs}ms using ${imageProvider.name}.`,
+          logs: `Generated ${results.length} scene images in ${durationMs}ms using ${results[0]?.provider || imageProvider.name}.`,
         },
       });
 

@@ -37,17 +37,23 @@ class ResilientImageProvider implements ImageProvider {
           targetModel = target.model;
         }
       }
-    } catch {}
+    } catch { }
 
     const tryCloudflare = async () => {
       try {
         const creds = await this.cloudflare.getCredentials();
         if (creds) {
-          logger.info(`[ImageEngine] (${this.agentType || 'General'}) Generating with Cloudflare Workers AI (${targetModel || creds.modelName})...`);
-          return await this.cloudflare.generateImage({
+          const modelToUse = targetModel || creds.modelName;
+          logger.info(`[ImageEngine] (${this.agentType || 'General'}) Generating with Cloudflare Workers AI (${modelToUse})...`);
+          const res = await this.cloudflare.generateImage({
             ...options,
-            model: targetModel || creds.modelName,
+            model: modelToUse,
           });
+          return {
+            ...res,
+            provider: `Cloudflare Workers AI (${modelToUse})`,
+            model: modelToUse,
+          };
         } else {
           logger.info(`[ImageEngine] (${this.agentType || 'General'}) Cloudflare selected but credentials missing in settings, skipping to fallback...`);
         }
@@ -63,7 +69,12 @@ class ResilientImageProvider implements ImageProvider {
         const apiKey = await this.openai.getApiKey();
         if (apiKey) {
           logger.info(`[ImageEngine] (${this.agentType || 'General'}) Generating with OpenAI DALL-E 3...`);
-          return await this.openai.generateImage(options);
+          const res = await this.openai.generateImage(options);
+          return {
+            ...res,
+            provider: 'OpenAI DALL-E 3',
+            model: 'dall-e-3',
+          };
         }
       } catch (err: any) {
         logger.warn(`[ImageEngine] OpenAI DALL-E failed (${err.message})`);
@@ -75,7 +86,12 @@ class ResilientImageProvider implements ImageProvider {
     const tryPollinations = async () => {
       try {
         logger.info(`[ImageEngine] (${this.agentType || 'General'}) Generating with Pollinations AI...`);
-        return await this.pollinations.generateImage(options);
+        const res = await this.pollinations.generateImage(options);
+        return {
+          ...res,
+          provider: 'Pollinations AI (Flux)',
+          model: 'flux',
+        };
       } catch (err: any) {
         logger.warn(`[ImageEngine] Pollinations AI failed (${err.message})`);
         failureLogs.push(`Pollinations: ${err.message}`);
@@ -117,7 +133,11 @@ class ResilientImageProvider implements ImageProvider {
     // 4. Fallback to Real Photographic Scene Engine (Wikimedia Commons High-Res Media cropped via FFmpeg)
     try {
       logger.info(`[ImageEngine] (${this.agentType || 'General'}) Fetching high-resolution photographic scene visual...`);
-      return await this.realPhoto.generateImage(options);
+      const res = await this.realPhoto.generateImage(options);
+      return {
+        ...res,
+        provider: 'Real Photographic Scene Engine',
+      };
     } catch (err: any) {
       logger.error(`[ImageEngine] Real Photo Engine failed: ${err.message}`);
       failureLogs.push(`RealPhotoEngine: ${err.message}`);

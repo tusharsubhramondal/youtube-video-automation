@@ -50,7 +50,7 @@ export const thumbnailAgent = {
         data: {
           projectId,
           type: 'THUMBNAIL',
-          provider: imageProvider.name,
+          provider: imgResult.provider || imageProvider.name,
           prompt: promptToUse,
           url: imgResult.url,
           localPath: imgResult.localPath,
@@ -76,7 +76,7 @@ export const thumbnailAgent = {
           completedAt: new Date(),
           executionTimeMs: durationMs,
           outputPayload: JSON.stringify({ ...thumbConcept, ...imgResult }),
-          logs: `Thumbnail generated in ${durationMs}ms with overlay text "${thumbConcept.overlayText}".`,
+          logs: `Thumbnail generated in ${durationMs}ms using ${imgResult.provider || imageProvider.name} with overlay text "${thumbConcept.overlayText}".`,
         },
       });
 
