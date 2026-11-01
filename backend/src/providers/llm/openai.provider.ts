@@ -178,3 +178,4 @@ Return valid JSON:
     return JSON.parse(this.cleanJson(rawText));
   }
 }
+

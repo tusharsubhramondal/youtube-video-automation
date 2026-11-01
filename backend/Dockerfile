@@ -1,9 +1,15 @@
-FROM node:22-alpine AS builder
+FROM node:22-bookworm-slim AS builder
 
 WORKDIR /app
 
-# Install build dependencies & ffmpeg
-RUN apk add --no-cache ffmpeg python3 make g++
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    python3 \
+    make \
+    g++ \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
 COPY prisma ./prisma/
@@ -15,11 +21,15 @@ COPY . .
 RUN npx prisma generate
 RUN npm run build
 
-FROM node:22-alpine AS runner
+FROM node:22-bookworm-slim AS runner
 
 WORKDIR /app
 
-RUN apk add --no-cache ffmpeg
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
 COPY prisma ./prisma/
@@ -32,5 +42,4 @@ COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 EXPOSE 5000
 
-CMD ["npm", "run", "start"]
-
+CMD ["sh", "-c", "npx prisma db push --skip-generate && npm run start"]
