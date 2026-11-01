@@ -177,5 +177,9 @@ Return valid JSON:
     const rawText = await this.executeChatCompletion(systemPrompt, userPrompt);
     return JSON.parse(this.cleanJson(rawText));
   }
+
+  async generateText(prompt: string, systemPrompt = 'You are a viral content strategist. Always respond strictly in valid JSON.'): Promise<string> {
+    return await this.executeChatCompletion(systemPrompt, prompt);
+  }
 }
 

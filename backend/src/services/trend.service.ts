@@ -60,13 +60,20 @@ export class TrendDiscoveryService {
       logger.warn(`[TrendDiscovery] Google Trends RSS skipped: ${err.message}`);
     }
 
-    // 3. Synthesize and score using LLM
+    // 3. Synthesize and score using Real LLM
     const llm = await getLLMProvider('RESEARCH');
-    const prompt = `You are a viral YouTube Shorts, Instagram Reels, and Facebook Reels trend strategist.
-Analyze the following real-time signals and synthesize the top ${count} most VIRAL short-form video topics for the niche: "${niche}".
+    if (!llm.generateText) {
+      throw new Error(`[TrendDiscovery] LLM Provider (${llm.name}) does not support generateText.`);
+    }
 
-Signals gathered today:
-${rawSignals.slice(0, 15).join('\n')}
+    const signalContext = rawSignals.length > 0
+      ? `Real-time community signals gathered today:\n${rawSignals.slice(0, 15).join('\n')}`
+      : `Analyze the current global viral trends and breakout search queries for the niche: "${niche}".`;
+
+    const prompt = `You are a viral YouTube Shorts, Instagram Reels, and Facebook Reels trend strategist.
+Based on the following signals, synthesize the top ${count} most VIRAL short-form video topics for the niche: "${niche}".
+
+${signalContext}
 
 Format your response strictly as valid JSON array of objects with keys:
 - "title": (string, under 50 characters, curiosity-inducing hook)
@@ -77,32 +84,35 @@ Format your response strictly as valid JSON array of objects with keys:
 
 Return ONLY JSON array.`;
 
-    try {
-      // Use LLM to generate structured trend candidates
-      const rawText = await (llm as any).generateText
-        ? await (llm as any).generateText(prompt)
-        : null;
-
-      if (rawText) {
-        const cleaned = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-        const parsed = JSON.parse(cleaned);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((item) => ({
-            title: item.title,
-            hookAngle: item.hookAngle,
-            source: 'Synthesized Trend Signals',
-            viralScore: item.viralScore || 90,
-            category: item.category || niche,
-            summary: item.summary || '',
-          }));
-        }
-      }
-    } catch (err: any) {
-      logger.warn(`[TrendDiscovery] LLM trend synthesis parsing: ${err.message}. Using high-engagement algorithmic fallbacks.`);
+    const rawText = await llm.generateText(prompt);
+    if (!rawText) {
+      throw new Error(`[TrendDiscovery] Real LLM (${llm.name}) returned an empty response. Zero mock fallback policy enforced.`);
     }
 
-    // High-engagement curated fallback topics tailored to niche
-    return this.getCuratedFallbackTrends(niche);
+    const cleaned = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+    let parsed: any;
+    try {
+      parsed = JSON.parse(cleaned);
+      if (!Array.isArray(parsed) && typeof parsed === 'object') {
+        parsed = parsed.topics || parsed.candidates || parsed.results || Object.values(parsed)[0];
+      }
+    } catch (parseErr: any) {
+      logger.error(`[TrendDiscovery] Failed to parse LLM JSON: ${parseErr.message}\nRaw text:\n${rawText}`);
+      throw new Error(`[TrendDiscovery] Real LLM trend analysis returned invalid JSON: ${parseErr.message}. Zero mock fallback policy enforced.`);
+    }
+
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed.map((item) => ({
+        title: item.title || item.topic,
+        hookAngle: item.hookAngle || item.hook,
+        source: 'Real AI Viral Trend Signals',
+        viralScore: typeof item.viralScore === 'number' ? item.viralScore : 92,
+        category: item.category || niche,
+        summary: item.summary || '',
+      }));
+    }
+
+    throw new Error(`[TrendDiscovery] Real LLM did not return an array of viral trend candidates. Zero mock fallback policy enforced.`);
   }
 
   /**
@@ -147,116 +157,6 @@ Return ONLY JSON array.`;
     if (lower.includes('history') || lower.includes('ancient')) return 'todayilearned';
     if (lower.includes('money') || lower.includes('finance') || lower.includes('business') || lower.includes('wealth')) return 'wallstreetbets';
     return 'todayilearned';
-  }
-
-  private getCuratedFallbackTrends(niche: string): TrendingCandidate[] {
-    const lower = niche.toLowerCase();
-
-    if (lower.includes('comedy') || lower.includes('humor') || lower.includes('funny') || lower.includes('meme')) {
-      return [
-        {
-          title: 'The Relatable Lie Everyone Tells Daily',
-          hookAngle: 'Tell me you do this without telling me you do this... why does everybody panic when someone knocks on the door?',
-          source: 'Curated Viral Signals',
-          viralScore: 97,
-          category: niche,
-          summary: 'A fast-paced relatable observational humor reel about modern everyday awkward moments.',
-        },
-        {
-          title: 'Expectation vs Reality: Working From Home',
-          hookAngle: 'What people think working from home looks like versus what actually happens at 2:15 PM on a Tuesday...',
-          source: 'Curated Viral Signals',
-          viralScore: 95,
-          category: niche,
-          summary: 'A hilarious skit-style breakdown of remote work truths with punchy timing.',
-        },
-        {
-          title: 'The 3 Types of People at Every Family Dinner',
-          hookAngle: 'Every family has these exact three people at the dinner table, and person number two is definitely you...',
-          source: 'Curated Viral Signals',
-          viralScore: 94,
-          category: niche,
-          summary: 'Relatable family dynamic comedy that drives immediate comment-section tagging.',
-        },
-      ];
-    }
-
-    if (lower.includes('dance') || lower.includes('choreograph')) {
-      return [
-        {
-          title: 'The Viral 10-Second Footwork Challenge',
-          hookAngle: 'This footwork move looks 10x harder than it actually is. Here is the 3-step cheat code to nail it today...',
-          source: 'Curated Viral Signals',
-          viralScore: 98,
-          category: niche,
-          summary: 'Step-by-step breakdown of trending viral choreography with beat drops and visual cues.',
-        },
-        {
-          title: 'How This Iconic Dance Move Was Invented',
-          hookAngle: 'The real secret behind how the Moonwalk and smooth anti-gravity lean were actually created will blow your mind...',
-          source: 'Curated Viral Signals',
-          viralScore: 96,
-          category: niche,
-          summary: 'Behind-the-scenes history of world-famous choreography with performance insights.',
-        },
-        {
-          title: 'Street Style vs Studio Dance: The Real Difference',
-          hookAngle: 'Most dancers don’t realize this tiny posture change is what gives street dance that effortless groove...',
-          source: 'Curated Viral Signals',
-          viralScore: 93,
-          category: niche,
-          summary: 'Quick technique comparison reel with high visual replay value.',
-        },
-      ];
-    }
-
-    if (lower.includes('entertainment') || lower.includes('pop culture')) {
-      return [
-        {
-          title: 'The Crazy Movie Scene That Was Never In The Script',
-          hookAngle: 'This famous line in cinema history was completely unscripted, and the director’s reaction made it into the final cut...',
-          source: 'Curated Viral Signals',
-          viralScore: 96,
-          category: niche,
-          summary: 'Unbelievable behind-the-scenes movie trivia that hooks pop-culture fans.',
-        },
-        {
-          title: 'The Hidden Easter Egg You Walked Past 100 Times',
-          hookAngle: 'Almost everyone missed this subtle background detail that completely changes the meaning of the ending...',
-          source: 'Curated Viral Signals',
-          viralScore: 94,
-          category: niche,
-          summary: 'Pop culture fan theories and visual easter eggs that prompt debates.',
-        },
-      ];
-    }
-
-    return [
-      {
-        title: 'The AI Breakthrough Nobody Is Talking About',
-        hookAngle: 'While everyone is looking at chatbots, scientists just used AI to solve something thought impossible...',
-        source: 'Curated Viral Signals',
-        viralScore: 96,
-        category: niche,
-        summary: 'A deep look into silent exponential shifts transforming industries behind closed doors.',
-      },
-      {
-        title: 'The Psychological Trick That Always Works',
-        hookAngle: 'If you want someone to agree with you instantly, never ask directly. Use this 19th-century secret instead...',
-        source: 'Curated Viral Signals',
-        viralScore: 94,
-        category: niche,
-        summary: 'A counter-intuitive psychological phenomenon proven by cognitive science research.',
-      },
-      {
-        title: 'How This $10 Invention Changed Everything',
-        hookAngle: 'This tiny everyday object is the only reason modern cities are able to exist today...',
-        source: 'Curated Viral Signals',
-        viralScore: 92,
-        category: niche,
-        summary: 'The surprising history of an overlooked technology that powers daily infrastructure.',
-      },
-    ];
   }
 }
 

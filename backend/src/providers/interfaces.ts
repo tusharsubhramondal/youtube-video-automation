@@ -55,6 +55,7 @@ export interface LLMProvider {
     prompt: string;
     overlayText: string;
   }>;
+  generateText?(prompt: string, systemPrompt?: string): Promise<string>;
 }
 
 export interface ImageGenerationOptions {

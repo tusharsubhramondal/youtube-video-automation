@@ -196,5 +196,14 @@ Return valid JSON:
       throw err;
     }
   }
+
+  async generateText(prompt: string): Promise<string> {
+    try {
+      return await this.executeWithModelFallback(prompt);
+    } catch (err: any) {
+      logger.error('Gemini generateText error:', err);
+      throw err;
+    }
+  }
 }
 

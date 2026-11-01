@@ -95,7 +95,9 @@ export async function getLLMProvider(agentType?: string): Promise<LLMProvider> {
     return new OpenAIProvider(envOpenAiKey, 'gpt-4o');
   }
 
-  // 5. Ultimate fallback: Mock LLM Provider for local development
-  logger.info(`[LLM Router] No API key detected for ${agentType || 'General'}. Utilizing Mock LLM Provider.`);
-  return new MockLLMProvider();
+  // 5. Zero-tolerance policy for mock LLM fallbacks
+  throw new Error(
+    `[LLM Router] No active AI provider API key found for ${agentType || 'General'} Agent. ` +
+    `Please configure your Google Gemini API key or OpenAI API key in Settings -> AI Providers (http://localhost:5173/settings/providers).`
+  );
 }
