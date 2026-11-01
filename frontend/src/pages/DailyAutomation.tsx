@@ -112,6 +112,7 @@ export const DailyAutomation: React.FC = () => {
     if (!confirm(topicTitle ? `Produce viral Reel for: "${topicTitle}"?` : "Trigger today's autonomous viral Reel cycle now?")) return;
     setIsTriggering(true);
     setTriggerStatus('Discovering viral angles and spinning up autonomous agent pipeline...');
+    setSchedule((prev: any) => (prev ? { ...prev, lastRunStatus: 'RUNNING' } : prev));
 
     try {
       const result = await automationService.triggerNow({
@@ -169,9 +170,34 @@ export const DailyAutomation: React.FC = () => {
               {isTriggering ? 'Producing Reel...' : "Run Today's Reel Now"}
             </Button>
             {schedule?.lastRunAt && (
-              <span className="text-[11px] text-slate-400 text-center font-mono">
-                Last Run: {new Date(schedule.lastRunAt).toLocaleDateString()} ({schedule.lastRunStatus || 'OK'})
-              </span>
+              <div className="flex items-center justify-center gap-1.5 text-[11px] font-mono">
+                <span className="text-slate-400">
+                  Last: {new Date(schedule.lastRunAt).toLocaleDateString()}
+                </span>
+                {schedule.lastRunStatus === 'SUCCESS' && (
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-semibold border border-emerald-500/20">
+                    SUCCESS
+                  </span>
+                )}
+                {schedule.lastRunStatus === 'READY' && (
+                  <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 font-semibold border border-blue-500/20">
+                    READY
+                  </span>
+                )}
+                {schedule.lastRunStatus === 'RUNNING' && (
+                  <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 font-semibold border border-amber-500/20 animate-pulse">
+                    RUNNING...
+                  </span>
+                )}
+                {schedule.lastRunStatus?.startsWith('FAILED') && (
+                  <span
+                    title={schedule.lastRunStatus}
+                    className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 font-semibold border border-rose-500/20 cursor-help"
+                  >
+                    FAILED (Hover details)
+                  </span>
+                )}
+              </div>
             )}
           </div>
         </div>
