@@ -1,7 +1,9 @@
 import { prisma } from '../services/prisma.service.js';
 import { getYouTubeProvider } from '../providers/youtube/index.js';
 import { logger } from '../utils/logger.js';
+import { config } from '../config/index.js';
 import fs from 'fs';
+import path from 'path';
 
 export const publishingAgent = {
   name: 'Publishing Agent',
@@ -96,6 +98,16 @@ export const publishingAgent = {
         }
       }
 
+      // Resolve local thumbnail file path on disk
+      let resolvedThumbPath: string | undefined;
+      if (project.thumbnailUrl) {
+        const thumbFilename = path.basename(project.thumbnailUrl);
+        const candidate = path.join(config.storage.uploadDir, thumbFilename);
+        if (fs.existsSync(candidate)) {
+          resolvedThumbPath = candidate;
+        }
+      }
+
       const uploadResult = await provider.uploadVideo({
         videoFilePath: project.finalVideoPath,
         title: params.title,
@@ -103,7 +115,7 @@ export const publishingAgent = {
         tags: tagList,
         categoryId: params.categoryId || '22',
         privacyStatus: params.privacyStatus.toLowerCase() as any,
-        thumbnailPath: project.thumbnailUrl ? project.thumbnailUrl : undefined,
+        thumbnailPath: resolvedThumbPath,
       });
 
       // Record published video
