@@ -43,6 +43,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
           hasGeminiKey: !!config.ai.geminiApiKey,
           hasOpenAiKey: !!config.ai.openAiApiKey,
           hasElevenLabsKey: !!config.ai.elevenLabsApiKey,
+          hasCloudflareKey: !!(config.ai.cloudflareApiToken && config.ai.cloudflareAccountId),
           hasGoogleOAuth: !!(config.youtube.clientId && config.youtube.clientSecret),
           ffmpegReady,
         },

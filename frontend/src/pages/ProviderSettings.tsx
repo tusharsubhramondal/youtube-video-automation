@@ -20,6 +20,7 @@ import {
   FileText,
   Search,
   Zap,
+  CloudLightning,
 } from 'lucide-react';
 import { settingsService, voiceService } from '../services/api';
 import { Button } from '../components/common/Button';
@@ -45,6 +46,12 @@ export const ProviderSettings: React.FC = () => {
   const [pollinationsKey, setPollinationsKey] = useState('');
   const [pollinationsModel, setPollinationsModel] = useState('flux');
   const [isSavingPollinations, setIsSavingPollinations] = useState(false);
+
+  // Cloudflare Workers AI State
+  const [cloudflareToken, setCloudflareToken] = useState('');
+  const [cloudflareAccountId, setCloudflareAccountId] = useState('');
+  const [cloudflareModel, setCloudflareModel] = useState('@cf/black-forest-labs/flux-1-schnell');
+  const [isSavingCloudflare, setIsSavingCloudflare] = useState(false);
 
   // Agent Model Routing State
   const [agentRouting, setAgentRouting] = useState<Record<string, { provider: string; model?: string }>>({
@@ -98,6 +105,14 @@ export const ProviderSettings: React.FC = () => {
       if (pollinationsProv) {
         setPollinationsKey(pollinationsProv.apiKey || '');
         setPollinationsModel(pollinationsProv.modelName || 'flux');
+      }
+
+      // Cloudflare
+      const cfProv = data.providers?.find((p: any) => p.providerKey === 'cloudflare');
+      if (cfProv) {
+        setCloudflareToken(cfProv.apiKey || '');
+        setCloudflareAccountId(cfProv.baseUrl || '');
+        setCloudflareModel(cfProv.modelName || '@cf/black-forest-labs/flux-1-schnell');
       }
 
       // Agent Routing
@@ -180,6 +195,27 @@ export const ProviderSettings: React.FC = () => {
     }
   };
 
+  const handleSaveCloudflare = async () => {
+    setIsSavingCloudflare(true);
+    try {
+      await settingsService.saveProvider({
+        providerKey: 'cloudflare',
+        name: 'Cloudflare Workers AI',
+        type: 'IMAGE',
+        apiKey: cloudflareToken,
+        baseUrl: cloudflareAccountId,
+        modelName: cloudflareModel,
+        isEnabled: true,
+      });
+      alert('Cloudflare Workers AI settings saved successfully!');
+      await loadSettings();
+    } catch (err: any) {
+      alert(`Failed to save Cloudflare: ${err.message}`);
+    } finally {
+      setIsSavingCloudflare(false);
+    }
+  };
+
   const handleSaveRouting = async () => {
     setIsSavingRouting(true);
     try {
@@ -194,13 +230,19 @@ export const ProviderSettings: React.FC = () => {
   };
 
   const updateRouting = (agentKey: string, field: 'provider' | 'model', value: string) => {
-    setAgentRouting((prev) => ({
-      ...prev,
-      [agentKey]: {
-        ...prev[agentKey],
-        [field]: value,
-      },
-    }));
+    setAgentRouting((prev) => {
+      const updated = {
+        ...prev,
+        [agentKey]: {
+          ...prev[agentKey],
+          [field]: value,
+        },
+      };
+      if (field === 'provider' && value === 'cloudflare' && !updated[agentKey].model?.startsWith('@cf/')) {
+        updated[agentKey].model = '@cf/black-forest-labs/flux-1-schnell';
+      }
+      return updated;
+    });
   };
 
   // Voice Handlers
@@ -280,6 +322,7 @@ export const ProviderSettings: React.FC = () => {
   const hasGemini = Boolean(settings?.env?.hasGeminiKey || geminiKey);
   const hasOpenAi = Boolean(settings?.env?.hasOpenAiKey || openAiKey);
   const hasPollinationsPollen = Boolean(pollinationsKey);
+  const hasCloudflare = Boolean(settings?.env?.hasCloudflareKey || (cloudflareToken && cloudflareAccountId));
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -491,6 +534,82 @@ export const ProviderSettings: React.FC = () => {
             </div>
           </div>
         </Card>
+
+        {/* 4. Cloudflare Workers AI Card */}
+        <Card className="space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-orange-950 text-orange-400 border border-orange-800/60">
+                <CloudLightning className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white text-base">Cloudflare Workers AI (Serverless FLUX & SDXL)</h3>
+                <p className="text-xs text-slate-400">
+                  Ultra-fast serverless diffusion models including FLUX.1 Schnell and SDXL Lightning for scene visuals and thumbnails.
+                </p>
+              </div>
+            </div>
+
+            <Badge variant={hasCloudflare ? 'success' : 'warning'}>
+              {hasCloudflare ? 'Active Credentials' : 'Not Configured'}
+            </Badge>
+          </div>
+
+          <div className="space-y-3 text-xs">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="text-slate-300 block font-medium mb-1">Cloudflare Account ID</label>
+                <input
+                  type="text"
+                  value={cloudflareAccountId}
+                  onChange={(e) => setCloudflareAccountId(e.target.value)}
+                  placeholder="e.g., 9a8b7c6d5e4f3a2b1c0d..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:ring-1 focus:ring-orange-500 font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="text-slate-300 block font-medium mb-1">API Token (Workers AI Permissions)</label>
+                <div className="relative">
+                  <Key className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="password"
+                    value={cloudflareToken}
+                    onChange={(e) => setCloudflareToken(e.target.value)}
+                    placeholder="Workers AI token with read/write access..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:ring-1 focus:ring-orange-500 font-mono"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-slate-300 block font-medium mb-1">Default Cloudflare Model</label>
+              <select
+                value={cloudflareModel}
+                onChange={(e) => setCloudflareModel(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white"
+              >
+                <option value="@cf/black-forest-labs/flux-1-schnell">@cf/black-forest-labs/flux-1-schnell (Flagship FLUX.1 • High Detail)</option>
+                <option value="@cf/bytedance/stable-diffusion-xl-lightning">@cf/bytedance/stable-diffusion-xl-lightning (ByteDance SDXL Lightning • Ultra Fast)</option>
+                <option value="@cf/stabilityai/stable-diffusion-xl-base-1.0">@cf/stabilityai/stable-diffusion-xl-base-1.0 (Stability AI SDXL Base 1.0)</option>
+                <option value="@cf/lykon/dreamshaper-8-lcm">@cf/lykon/dreamshaper-8-lcm (DreamShaper 8 Latent Consistency)</option>
+              </select>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <Button
+                size="sm"
+                variant="primary"
+                icon={<Save className="w-3.5 h-3.5" />}
+                isLoading={isSavingCloudflare}
+                onClick={handleSaveCloudflare}
+              >
+                Save Cloudflare Settings
+              </Button>
+            </div>
+          </div>
+        </Card>
       </div>
 
       {/* SECTION 2: Agent-to-Model Routing Matrix */}
@@ -602,8 +721,21 @@ export const ProviderSettings: React.FC = () => {
                 className="bg-slate-900 border border-slate-700 rounded p-1.5 text-xs text-white"
               >
                 <option value="pollinations">Pollinations AI (Flux/Sana)</option>
+                <option value="cloudflare">Cloudflare Workers AI (FLUX / SDXL)</option>
                 <option value="openai">OpenAI DALL-E 3</option>
               </select>
+              {agentRouting.IMAGE?.provider === 'cloudflare' && (
+                <select
+                  value={agentRouting.IMAGE?.model || '@cf/black-forest-labs/flux-1-schnell'}
+                  onChange={(e) => updateRouting('IMAGE', 'model', e.target.value)}
+                  className="bg-slate-900 border border-slate-700 rounded p-1.5 text-xs text-white"
+                >
+                  <option value="@cf/black-forest-labs/flux-1-schnell">flux-1-schnell (FLUX Flagship)</option>
+                  <option value="@cf/bytedance/stable-diffusion-xl-lightning">sdxl-lightning (ByteDance)</option>
+                  <option value="@cf/stabilityai/stable-diffusion-xl-base-1.0">sdxl-base-1.0 (Stability AI)</option>
+                  <option value="@cf/lykon/dreamshaper-8-lcm">dreamshaper-8-lcm (Lykon)</option>
+                </select>
+              )}
             </div>
           </div>
 
@@ -623,9 +755,22 @@ export const ProviderSettings: React.FC = () => {
                 onChange={(e) => updateRouting('THUMBNAIL', 'provider', e.target.value)}
                 className="bg-slate-900 border border-slate-700 rounded p-1.5 text-xs text-white"
               >
+                <option value="cloudflare">Cloudflare Workers AI (FLUX / SDXL)</option>
                 <option value="openai">OpenAI DALL-E 3 (High Impact)</option>
                 <option value="pollinations">Pollinations AI (Flux)</option>
               </select>
+              {agentRouting.THUMBNAIL?.provider === 'cloudflare' && (
+                <select
+                  value={agentRouting.THUMBNAIL?.model || '@cf/black-forest-labs/flux-1-schnell'}
+                  onChange={(e) => updateRouting('THUMBNAIL', 'model', e.target.value)}
+                  className="bg-slate-900 border border-slate-700 rounded p-1.5 text-xs text-white"
+                >
+                  <option value="@cf/black-forest-labs/flux-1-schnell">flux-1-schnell (FLUX Flagship)</option>
+                  <option value="@cf/bytedance/stable-diffusion-xl-lightning">sdxl-lightning (ByteDance)</option>
+                  <option value="@cf/stabilityai/stable-diffusion-xl-base-1.0">sdxl-base-1.0 (Stability AI)</option>
+                  <option value="@cf/lykon/dreamshaper-8-lcm">dreamshaper-8-lcm (Lykon)</option>
+                </select>
+              )}
             </div>
           </div>
 
@@ -824,6 +969,14 @@ export const ProviderSettings: React.FC = () => {
               <p className="text-slate-400 mt-0.5">Generates real high-resolution images via Flux, Sana, and Turbo with rate-limit recovery.</p>
             </div>
             <Badge variant="success">Operational</Badge>
+          </div>
+
+          <div className="p-3 bg-slate-950 rounded-lg border border-slate-800 flex items-center justify-between">
+            <div>
+              <h4 className="font-semibold text-white">Cloudflare Workers AI Diffusion Engine</h4>
+              <p className="text-slate-400 mt-0.5">High-speed serverless visual synthesis with FLUX.1 Schnell, SDXL Lightning, and LCM.</p>
+            </div>
+            <Badge variant={hasCloudflare ? 'success' : 'info'}>{hasCloudflare ? 'Active' : 'Supported'}</Badge>
           </div>
 
           <div className="p-3 bg-slate-950 rounded-lg border border-slate-800 flex items-center justify-between">

@@ -1,6 +1,7 @@
 import { ImageProvider, ImageGenerationOptions } from '../interfaces.js';
 import { PollinationsImageProvider } from './pollinations.image.provider.js';
 import { OpenAIImageProvider } from './openai.image.provider.js';
+import { CloudflareImageProvider } from './cloudflare.image.provider.js';
 import { RealPhotoProvider } from './realphoto.image.provider.js';
 import { logger } from '../../utils/logger.js';
 import { prisma } from '../../services/prisma.service.js';
@@ -9,6 +10,7 @@ class ResilientImageProvider implements ImageProvider {
   name = 'Real AI & Photographic Visual Engine';
   private openai = new OpenAIImageProvider();
   private pollinations = new PollinationsImageProvider();
+  private cloudflare = new CloudflareImageProvider();
   private realPhoto = new RealPhotoProvider();
   private agentType?: string;
 
@@ -20,7 +22,9 @@ class ResilientImageProvider implements ImageProvider {
     const failureLogs: string[] = [];
 
     // Check if user set specific preferred image provider for this agent
-    let preferred = 'openai';
+    let preferred = 'pollinations';
+    let targetModel: string | undefined;
+
     try {
       const routingRecord = await prisma.aIProvider.findUnique({
         where: { providerKey: 'agent_routing' },
@@ -30,9 +34,29 @@ class ResilientImageProvider implements ImageProvider {
         const target = routing[this.agentType.toUpperCase()];
         if (target?.provider) {
           preferred = target.provider.toLowerCase();
+          targetModel = target.model;
         }
       }
     } catch {}
+
+    const tryCloudflare = async () => {
+      try {
+        const creds = await this.cloudflare.getCredentials();
+        if (creds) {
+          logger.info(`[ImageEngine] (${this.agentType || 'General'}) Generating with Cloudflare Workers AI (${targetModel || creds.modelName})...`);
+          return await this.cloudflare.generateImage({
+            ...options,
+            model: targetModel || creds.modelName,
+          });
+        } else {
+          logger.info(`[ImageEngine] (${this.agentType || 'General'}) Cloudflare selected but credentials missing in settings, skipping to fallback...`);
+        }
+      } catch (err: any) {
+        logger.warn(`[ImageEngine] Cloudflare Workers AI failed (${err.message})`);
+        failureLogs.push(`CloudflareAI: ${err.message}`);
+      }
+      return null;
+    };
 
     const tryOpenAI = async () => {
       try {
@@ -59,23 +83,38 @@ class ResilientImageProvider implements ImageProvider {
       return null;
     };
 
-    // If preferred is pollinations, prioritize it over OpenAI
-    if (preferred === 'pollinations') {
-      const res1 = await tryPollinations();
-      if (res1) return res1;
-
-      const res2 = await tryOpenAI();
-      if (res2) return res2;
-    } else {
-      // Default order: OpenAI -> Pollinations
-      const res1 = await tryOpenAI();
+    // Priority execution based on agent routing preference
+    if (preferred === 'cloudflare') {
+      const res1 = await tryCloudflare();
       if (res1) return res1;
 
       const res2 = await tryPollinations();
       if (res2) return res2;
+
+      const res3 = await tryOpenAI();
+      if (res3) return res3;
+    } else if (preferred === 'openai') {
+      const res1 = await tryOpenAI();
+      if (res1) return res1;
+
+      const res2 = await tryCloudflare();
+      if (res2) return res2;
+
+      const res3 = await tryPollinations();
+      if (res3) return res3;
+    } else {
+      // Default: Pollinations -> Cloudflare -> OpenAI
+      const res1 = await tryPollinations();
+      if (res1) return res1;
+
+      const res2 = await tryCloudflare();
+      if (res2) return res2;
+
+      const res3 = await tryOpenAI();
+      if (res3) return res3;
     }
 
-    // 3. Fallback to Real Photographic Scene Engine (Wikimedia Commons High-Res Media cropped via FFmpeg)
+    // 4. Fallback to Real Photographic Scene Engine (Wikimedia Commons High-Res Media cropped via FFmpeg)
     try {
       logger.info(`[ImageEngine] (${this.agentType || 'General'}) Fetching high-resolution photographic scene visual...`);
       return await this.realPhoto.generateImage(options);

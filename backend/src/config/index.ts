@@ -30,6 +30,8 @@ export const config = {
     geminiApiKey: process.env.GEMINI_API_KEY || '',
     openAiApiKey: process.env.OPENAI_API_KEY || '',
     elevenLabsApiKey: process.env.ELEVENLABS_API_KEY || '',
+    cloudflareApiToken: process.env.CLOUDFLARE_API_TOKEN || '',
+    cloudflareAccountId: process.env.CLOUDFLARE_ACCOUNT_ID || '',
   },
   
   youtube: {
