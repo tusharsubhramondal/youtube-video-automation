@@ -29,8 +29,8 @@ export const thumbnailAgent = {
 
       if (!project) throw new Error('Project not found');
 
-      const llm = await getLLMProvider();
-      const imageProvider = getImageProvider();
+      const llm = await getLLMProvider('THUMBNAIL');
+      const imageProvider = getImageProvider('THUMBNAIL');
 
       const thumbConcept = await llm.generateThumbnailPrompt(project.topic, project.visualStyle);
       const promptToUse = customPrompt || thumbConcept.prompt;

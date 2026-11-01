@@ -32,7 +32,7 @@ export const researchAgent = {
         data: { status: 'RESEARCHING', currentStage: 'research' },
       });
 
-      const llm = await getLLMProvider();
+      const llm = await getLLMProvider('RESEARCH');
       const research = await llm.generateResearch(project.topic, project.category, project.language);
 
       // Save research output into project

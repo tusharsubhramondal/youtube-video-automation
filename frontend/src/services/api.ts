@@ -207,6 +207,10 @@ export const settingsService = {
     const res = await api.post('/settings/providers', data);
     return res.data.data;
   },
+  saveRouting: async (routing: any) => {
+    const res = await api.post('/settings/routing', { routing });
+    return res.data.data;
+  },
   saveProjectSettings: async (projectId: string, data: Partial<ProjectSettings>) => {
     const res = await api.put(`/settings/project/${projectId}`, data);
     return res.data.data;

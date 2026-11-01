@@ -41,7 +41,7 @@ export const scriptAgent = {
         hooks: [],
       };
 
-      const llm = await getLLMProvider();
+      const llm = await getLLMProvider('SCRIPT');
       const scriptResult = await llm.generateScript({
         topic: project.topic,
         research,

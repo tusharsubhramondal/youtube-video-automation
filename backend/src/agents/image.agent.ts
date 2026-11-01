@@ -37,7 +37,7 @@ export const imageAgent = {
         throw new Error('No scenes found to generate images for');
       }
 
-      const imageProvider = getImageProvider();
+      const imageProvider = getImageProvider('IMAGE');
       const isShorts = project.format === 'SHORTS';
       const aspectRatio = isShorts ? '9:16' : '16:9';
 

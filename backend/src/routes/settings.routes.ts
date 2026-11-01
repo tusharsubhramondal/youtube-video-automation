@@ -5,12 +5,32 @@ import { checkFfmpegAvailable } from '../services/ffmpeg.service.js';
 
 const router = Router();
 
+const DEFAULT_ROUTING = {
+  RESEARCH: { provider: 'gemini', model: 'gemini-3.5-flash-lite' },
+  SCRIPT: { provider: 'gemini', model: 'gemini-3.5-flash-lite' },
+  IMAGE: { provider: 'pollinations', model: 'flux' },
+  THUMBNAIL: { provider: 'openai', model: 'dall-e-3' },
+  SEO: { provider: 'gemini', model: 'gemini-3.5-flash-lite' },
+  VOICE: { provider: 'edgetts', voiceId: 'en-US-ChristopherNeural' },
+};
+
 // Get current system settings and provider status
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const aiProviders = await prisma.aIProvider.findMany({
       orderBy: { name: 'asc' },
     });
+
+    const routingRecord = await prisma.aIProvider.findUnique({
+      where: { providerKey: 'agent_routing' },
+    });
+
+    let agentRouting = DEFAULT_ROUTING;
+    if (routingRecord?.configJson) {
+      try {
+        agentRouting = { ...DEFAULT_ROUTING, ...JSON.parse(routingRecord.configJson) };
+      } catch {}
+    }
 
     const ffmpegReady = await checkFfmpegAvailable();
 
@@ -26,7 +46,8 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
           hasGoogleOAuth: !!(config.youtube.clientId && config.youtube.clientSecret),
           ffmpegReady,
         },
-        providers: aiProviders,
+        providers: aiProviders.filter((p) => p.providerKey !== 'agent_routing'),
+        agentRouting,
       },
     });
   } catch (error) {
@@ -37,7 +58,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 // Update or add AI provider configuration
 router.post('/providers', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, type, providerKey, apiKey, baseUrl, modelName, isDefault, isEnabled } = req.body;
+    const { name, type, providerKey, apiKey, baseUrl, modelName, isDefault, isEnabled, configJson } = req.body;
 
     const provider = await prisma.aIProvider.upsert({
       where: { providerKey },
@@ -49,6 +70,7 @@ router.post('/providers', async (req: Request, res: Response, next: NextFunction
         modelName: modelName || null,
         isDefault: isDefault ?? false,
         isEnabled: isEnabled ?? true,
+        configJson: configJson || null,
       },
       create: {
         name,
@@ -59,10 +81,39 @@ router.post('/providers', async (req: Request, res: Response, next: NextFunction
         modelName: modelName || null,
         isDefault: isDefault ?? false,
         isEnabled: isEnabled ?? true,
+        configJson: configJson || null,
       },
     });
 
     res.json({ success: true, data: provider });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Update Agent Routing Matrix
+router.post('/routing', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { routing } = req.body;
+    if (!routing || typeof routing !== 'object') {
+      return res.status(400).json({ success: false, error: 'Invalid routing payload' });
+    }
+
+    const record = await prisma.aIProvider.upsert({
+      where: { providerKey: 'agent_routing' },
+      update: {
+        configJson: JSON.stringify(routing),
+      },
+      create: {
+        name: 'Agent Model Routing Matrix',
+        type: 'ROUTING',
+        providerKey: 'agent_routing',
+        configJson: JSON.stringify(routing),
+        isEnabled: true,
+      },
+    });
+
+    res.json({ success: true, data: JSON.parse(record.configJson!) });
   } catch (error) {
     next(error);
   }
@@ -102,4 +153,3 @@ router.put('/project/:projectId', async (req: Request, res: Response, next: Next
 });
 
 export default router;
-

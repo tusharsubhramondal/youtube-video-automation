@@ -27,7 +27,7 @@ export const seoAgent = {
 
       if (!project) throw new Error('Project not found');
 
-      const llm = await getLLMProvider();
+      const llm = await getLLMProvider('SEO');
       const seoData = await llm.generateSeoMetadata({
         topic: project.topic,
         category: project.category,
