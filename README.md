@@ -25,7 +25,10 @@ An enterprise-grade, modular, production-ready AI-powered YouTube video automati
   - Configurable resolution (1080p / 720p) and frame rates (30 fps / 60 fps).
 
 - **Resilient Multi-Provider AI Architecture**:
-  - **LLM**: Google Gemini API (`gemini-3.5-flash-lite`, `gemini-3.5-flash`, `gemini-3.7-flash`, `gemini-3.8-flash`) with dynamic model fallback and local mock fallback.
+  - **Dynamic Multi-LLM Router**:
+    - **Google Gemini**: Flagship & Flash models (`gemini-3.5-flash-lite`, `gemini-3.5-flash`, `gemini-3.7-flash`, `gemini-3.8-flash`, `gemini-2.5-pro`).
+    - **OpenAI**: Flagship chat reasoning (`gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`, `o1-mini`).
+    - **Per-Agent Routing Matrix**: Granular assignment of specific LLMs and engines per autonomous agent (e.g. GPT-4o for Scripting, Gemini Flash-Lite for Research/SEO).
   - **Images**: **100% Real Image Engine (Zero Mock Colored Boxes / SVGs)**:
     - **OpenAI DALL-E 3**: High-fidelity AI generative visuals (when `OPENAI_API_KEY` is provided).
     - **Pollinations AI**: Multi-model free generative AI (`flux`, `sana`, `turbo`) with auto-cooldown retry and `POLLEN_API_KEY` acceleration.
