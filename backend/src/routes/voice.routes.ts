@@ -108,7 +108,7 @@ router.post('/:id/preview', async (req: Request, res: Response, next: NextFuncti
     const tts = getTTSProvider();
     const result = await tts.generateSpeech({
       text: previewText,
-      voiceStyle: voice.name,
+      voiceStyle: voice.voiceId || voice.name,
       language: voice.language.startsWith('en') ? 'en' : 'en',
       outputPath,
     });
