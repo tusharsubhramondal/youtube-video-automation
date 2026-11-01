@@ -15,6 +15,8 @@ router.get('/health', async (req: Request, res: Response) => {
   }
 
   const ffmpegOperational = await checkFfmpegAvailable();
+  const dbGemini = await prisma.aIProvider.findUnique({ where: { providerKey: 'gemini' } }).catch(() => null);
+  const isGeminiActive = !!(config.ai.geminiApiKey || (dbGemini?.apiKey && dbGemini.isEnabled));
 
   res.json({
     status: 'ok',
@@ -23,7 +25,7 @@ router.get('/health', async (req: Request, res: Response) => {
     services: {
       database: dbStatus,
       ffmpeg: ffmpegOperational ? 'available' : 'unavailable',
-      geminiConfigured: !!config.ai.geminiApiKey,
+      geminiConfigured: isGeminiActive,
       youtubeOAuthConfigured: !!(config.youtube.clientId && config.youtube.clientSecret),
     },
     version: '1.0.0',
