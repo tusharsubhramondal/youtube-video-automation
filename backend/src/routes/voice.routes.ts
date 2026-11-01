@@ -47,23 +47,55 @@ const DEFAULT_VOICES = [
     sampleUrl: null,
     isDefault: false,
   },
+  {
+    name: 'Youthful & Dynamic (Eric)',
+    voiceId: 'en-US-EricNeural',
+    language: 'en-US',
+    gender: 'Male',
+    sampleUrl: null,
+    isDefault: false,
+  },
+  {
+    name: 'Refined & Elegant (Sonia)',
+    voiceId: 'en-GB-SoniaNeural',
+    language: 'en-GB',
+    gender: 'Female',
+    sampleUrl: null,
+    isDefault: false,
+  },
+  {
+    name: 'Warm & Empathetic (Michelle)',
+    voiceId: 'en-US-MichelleNeural',
+    language: 'en-US',
+    gender: 'Female',
+    sampleUrl: null,
+    isDefault: false,
+  },
+  {
+    name: 'Indian English (Neerja)',
+    voiceId: 'en-IN-NeerjaNeural',
+    language: 'en-IN',
+    gender: 'Female',
+    sampleUrl: null,
+    isDefault: false,
+  },
 ];
 
-// Get all voice profiles (with auto-seeding if empty)
+// Get all voice profiles (with auto-sync for default voices)
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    let voices = await prisma.voiceProfile.findMany({
-      orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
-    });
-
-    if (voices.length === 0) {
-      for (const v of DEFAULT_VOICES) {
+    for (const v of DEFAULT_VOICES) {
+      const exists = await prisma.voiceProfile.findFirst({
+        where: { voiceId: v.voiceId },
+      });
+      if (!exists) {
         await prisma.voiceProfile.create({ data: v });
       }
-      voices = await prisma.voiceProfile.findMany({
-        orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
-      });
     }
+
+    const voices = await prisma.voiceProfile.findMany({
+      orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
+    });
 
     res.json({ success: true, data: voices });
   } catch (error) {
