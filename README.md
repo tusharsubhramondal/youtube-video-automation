@@ -25,10 +25,13 @@ An enterprise-grade, modular, production-ready AI-powered YouTube video automati
   - Configurable resolution (1080p / 720p) and frame rates (30 fps / 60 fps).
 
 - **Resilient Multi-Provider AI Architecture**:
-  - **LLM**: Google Gemini 1.5/2.0 API with seamless fallback to Local Mock Provider.
-  - **Images**: Pollinations AI (free high-res image generation with 0 API keys) & Mock SVG/Canvas engine.
-  - **Video**: FFmpeg motion synthesizer.
-  - **Voice**: Google Free TTS & Mock Audio Generator.
+  - **LLM**: Google Gemini API (`gemini-3.5-flash-lite`, `gemini-3.5-flash`, `gemini-3.7-flash`, `gemini-3.8-flash`) with dynamic model fallback and local mock fallback.
+  - **Images**: **100% Real Image Engine (Zero Mock Colored Boxes / SVGs)**:
+    - **OpenAI DALL-E 3**: High-fidelity AI generative visuals (when `OPENAI_API_KEY` is provided).
+    - **Pollinations AI**: Multi-model free generative AI (`flux`, `sana`, `turbo`) with auto-cooldown retry and `POLLEN_API_KEY` acceleration.
+    - **Real Photographic Scene Engine**: Real high-resolution photography from open media archives center-cropped and formatted with FFmpeg (16:9 / 9:16).
+  - **Video**: FFmpeg motion synthesizer with Ken Burns pan/zoom effects.
+  - **Voice**: Google Free TTS & Microsoft Edge Neural TTS audio generator.
   - **YouTube**: Real Google OAuth 2.0 + Sandbox Mock Channel for offline zero-cost testing.
 
 - **13 Studio Dashboard Pages**:
