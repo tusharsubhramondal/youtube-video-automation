@@ -217,5 +217,54 @@ export const settingsService = {
   },
 };
 
+export const metaService = {
+  getAccounts: async () => {
+    const res = await api.get('/meta/accounts');
+    return res.data.data;
+  },
+  connectAccount: async (data: { pageId: string; pageAccessToken: string }) => {
+    const res = await api.post('/meta/connect', data);
+    return res.data;
+  },
+  disconnectAccount: async (id: string) => {
+    const res = await api.delete(`/meta/accounts/${id}`);
+    return res.data;
+  },
+  publishReel: async (data: {
+    projectId: string;
+    platform: 'INSTAGRAM_REELS' | 'FACEBOOK_REELS';
+    metaAccountId?: string;
+    caption?: string;
+    title?: string;
+    userApproved: boolean;
+  }) => {
+    const res = await api.post('/meta/publish-reel', data);
+    return res.data.data;
+  },
+  getReels: async (projectId: string) => {
+    const res = await api.get(`/meta/reels/${projectId}`);
+    return res.data.data;
+  },
+};
+
+export const automationService = {
+  getSchedule: async () => {
+    const res = await api.get('/automation/schedule');
+    return res.data.data;
+  },
+  updateSchedule: async (data: any) => {
+    const res = await api.put('/automation/schedule', data);
+    return res.data.data;
+  },
+  getTrends: async (niche?: string) => {
+    const res = await api.get('/automation/trends', { params: { niche } });
+    return res.data.data;
+  },
+  triggerNow: async (data?: { customNiche?: string; autoPublishOverride?: boolean }) => {
+    const res = await api.post('/automation/trigger-now', data || {});
+    return res.data.data;
+  },
+};
+
 export default api;
 

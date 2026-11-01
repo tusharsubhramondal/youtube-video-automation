@@ -39,6 +39,10 @@ export const config = {
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     redirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/youtube/oauth2callback',
   },
+
+  meta: {
+    publicBaseUrl: process.env.PUBLIC_BASE_URL || '',
+  },
   
   storage: {
     rootDir: ROOT_DIR,

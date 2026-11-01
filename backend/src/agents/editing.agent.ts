@@ -65,7 +65,7 @@ export const editingAgent = {
 
       const fps = options?.fps || project.settings?.fps || 30;
       const enableSubtitles = options?.enableSubtitles ?? project.settings?.enableSubtitles ?? true;
-      const subtitleFontSize = options?.subtitleFontSize || (isShorts ? 22 : 24);
+      const subtitleFontSize = options?.subtitleFontSize || (isShorts ? 28 : 24);
       const voiceVol = options?.voiceVolume ?? project.settings?.voiceVolume ?? 1.0;
       const bgMusicVol = options?.bgMusicVolume ?? project.settings?.backgroundMusicVolume ?? 0.15;
 
@@ -269,11 +269,12 @@ export const editingAgent = {
         // Build Video and Audio Filtergraphs
         const videoFilters: string[] = [];
 
-        // Subtitle burn-in if enabled
+        // Subtitle burn-in if enabled (respects vertical Safe Zone for Reels & Shorts)
         if (enableSubtitles && fs.existsSync(srtPath)) {
           const escapedSrtPath = srtPath.replace(/\\/g, '/').replace(':', '\\:');
           const primaryColorHex = options?.subtitleColor ? options.subtitleColor.replace('#', '') : 'FFFFFF';
-          videoFilters.push(`subtitles='${escapedSrtPath}':force_style='FontSize=${subtitleFontSize},PrimaryColour=&H00${primaryColorHex},OutlineColour=&H00000000,BorderStyle=3,BackColour=&H80000000,MarginV=30'`);
+          const verticalMargin = isShorts ? 190 : 35; // 190px safe zone clearance for Reels/Shorts UI
+          videoFilters.push(`subtitles='${escapedSrtPath}':force_style='FontSize=${subtitleFontSize},Bold=1,PrimaryColour=&H00${primaryColorHex},OutlineColour=&H00000000,BorderStyle=3,BackColour=&H80000000,MarginV=${verticalMargin}'`);
         }
 
         if (videoFilters.length > 0) {

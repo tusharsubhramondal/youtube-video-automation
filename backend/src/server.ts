@@ -6,6 +6,7 @@ import { logger } from './utils/logger.js';
 import { connectPrisma } from './services/prisma.service.js';
 import { initQueues, registerWorker } from './services/queue.service.js';
 import { editingAgent } from './agents/editing.agent.js';
+import { dailyAutomationService } from './services/automation.service.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 import healthRoutes from './routes/health.routes.js';
 import authRoutes from './routes/auth.routes.js';
@@ -17,6 +18,8 @@ import renderRoutes from './routes/render.routes.js';
 import youtubeRoutes from './routes/youtube.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
 import voiceRoutes from './routes/voice.routes.js';
+import metaRoutes from './routes/meta.routes.js';
+import automationRoutes from './routes/automation.routes.js';
 
 const app = express();
 
@@ -42,6 +45,8 @@ app.use('/api/agents', agentRoutes);
 app.use('/api/assets', assetRoutes);
 app.use('/api/renders', renderRoutes);
 app.use('/api/youtube', youtubeRoutes);
+app.use('/api/meta', metaRoutes);
+app.use('/api/automation', automationRoutes);
 app.use('/api/settings', settingsRoutes);
 
 // Error Handler Middleware
@@ -64,6 +69,12 @@ export async function startServer() {
       voiceVolume: data.voiceVolume,
       backgroundMusicPath: data.backgroundMusicPath,
     });
+  });
+
+  // Register daily automation worker for viral Reels
+  registerWorker('daily-automation', async (data: any) => {
+    logger.info('[DailyAutomationWorker] Triggered daily viral Reel production job...');
+    return await dailyAutomationService.executeDailyProduction(data);
   });
 
   const server = app.listen(config.port, () => {

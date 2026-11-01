@@ -55,7 +55,7 @@ export class SubtitleService {
   static generateSrt(scenes: SubtitleScene[], outputPath: string, isShorts = false): string {
     let srtContent = '';
     let currentTime = 0;
-    const maxChars = isShorts ? 28 : 42;
+    const maxChars = isShorts ? 24 : 42;
 
     scenes.forEach((scene, index) => {
       const startTime = currentTime;
@@ -81,7 +81,7 @@ export class SubtitleService {
   static generateVtt(scenes: SubtitleScene[], outputPath: string, isShorts = false): string {
     let vttContent = 'WEBVTT\n\n';
     let currentTime = 0;
-    const maxChars = isShorts ? 28 : 42;
+    const maxChars = isShorts ? 24 : 42;
 
     scenes.forEach((scene, index) => {
       const startTime = currentTime;

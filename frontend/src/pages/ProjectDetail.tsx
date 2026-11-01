@@ -12,8 +12,11 @@ import {
   Clock,
   Cpu,
   FolderOpen,
+  ExternalLink,
+  CheckCircle2,
+  Loader2,
 } from 'lucide-react';
-import { projectService, agentService } from '../services/api';
+import { projectService, agentService, metaService } from '../services/api';
 import { VideoProject } from '../types';
 import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
@@ -26,13 +29,46 @@ export const ProjectDetail: React.FC = () => {
   const [project, setProject] = useState<VideoProject | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRunningPipeline, setIsRunningPipeline] = useState(false);
+  const [publishedReels, setPublishedReels] = useState<any[]>([]);
+  const [isPublishingReel, setIsPublishingReel] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
       localStorage.setItem('activeProjectId', id);
       loadProject(id);
+      loadReels(id);
     }
   }, [id]);
+
+  const loadReels = async (projectId: string) => {
+    try {
+      const list = await metaService.getReels(projectId);
+      setPublishedReels(list || []);
+    } catch {}
+  };
+
+  const handlePublishReel = async (platform: 'INSTAGRAM_REELS' | 'FACEBOOK_REELS') => {
+    if (!project) return;
+    const platformLabel = platform === 'INSTAGRAM_REELS' ? 'Instagram Reels' : 'Facebook Page Reels';
+    if (!confirm(`Publish this ${project.format === 'SHORTS' ? 'vertical Reel' : 'video'} to ${platformLabel}?`)) return;
+
+    setIsPublishingReel(platform);
+    try {
+      await metaService.publishReel({
+        projectId: project.id,
+        platform,
+        userApproved: true,
+        title: project.seoTitle || project.title,
+        caption: project.seoDescription || project.title,
+      });
+      alert(`Successfully published to ${platformLabel}!`);
+      await loadReels(project.id);
+    } catch (err: any) {
+      alert(`Publishing failed: ${err.response?.data?.error || err.message}`);
+    } finally {
+      setIsPublishingReel(null);
+    }
+  };
 
   const loadProject = async (projectId: string) => {
     try {
@@ -284,6 +320,130 @@ export const ProjectDetail: React.FC = () => {
               </span>
             </div>
           </div>
+        </Card>
+
+        {/* Multi-Platform Social Distribution Card */}
+        <Card className="lg:col-span-3 space-y-4 border-slate-800 bg-slate-900/90 shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-pink-950/60 text-pink-400 border border-pink-800/40">
+                <Share2 className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white text-sm">Multi-Platform Distribution (Instagram, Facebook & YouTube)</h3>
+                <p className="text-xs text-slate-400">
+                  {project.format === 'SHORTS'
+                    ? 'Publish this 9:16 vertical video directly as an Instagram Reel, Facebook Reel, or YouTube Short.'
+                    : 'Publish video across your connected social platforms.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => navigate('/settings/social')}
+              >
+                Manage Social Accounts
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+            {/* 1. Instagram Reels */}
+            <div className="p-4 bg-slate-950 rounded-xl border border-slate-800/90 flex flex-col justify-between gap-3">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-semibold text-white text-xs">Instagram Reels</span>
+                  <Badge variant="purple" size="sm">9:16 Format</Badge>
+                </div>
+                <p className="text-[11px] text-slate-400">Publishes directly via Instagram Graph API container flow.</p>
+              </div>
+
+              <Button
+                size="sm"
+                variant="primary"
+                disabled={!project.finalVideoUrl || isPublishingReel !== null}
+                isLoading={isPublishingReel === 'INSTAGRAM_REELS'}
+                onClick={() => handlePublishReel('INSTAGRAM_REELS')}
+              >
+                Publish to Instagram
+              </Button>
+            </div>
+
+            {/* 2. Facebook Page Reels */}
+            <div className="p-4 bg-slate-950 rounded-xl border border-slate-800/90 flex flex-col justify-between gap-3">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-semibold text-white text-xs">Facebook Page Reels</span>
+                  <Badge variant="info" size="sm">Page Video API</Badge>
+                </div>
+                <p className="text-[11px] text-slate-400">Publishes to connected Facebook Page Reels feed.</p>
+              </div>
+
+              <Button
+                size="sm"
+                variant="primary"
+                disabled={!project.finalVideoUrl || isPublishingReel !== null}
+                isLoading={isPublishingReel === 'FACEBOOK_REELS'}
+                onClick={() => handlePublishReel('FACEBOOK_REELS')}
+              >
+                Publish to Facebook
+              </Button>
+            </div>
+
+            {/* 3. YouTube Shorts */}
+            <div className="p-4 bg-slate-950 rounded-xl border border-slate-800/90 flex flex-col justify-between gap-3">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-semibold text-white text-xs">YouTube Shorts</span>
+                  <Badge variant="danger" size="sm">YouTube Data API</Badge>
+                </div>
+                <p className="text-[11px] text-slate-400">Uploads with verified OAuth to connected YouTube channel.</p>
+              </div>
+
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!project.finalVideoUrl}
+                onClick={() => navigate('/youtube')}
+              >
+                Publish to YouTube
+              </Button>
+            </div>
+          </div>
+
+          {/* Published Reels History */}
+          {publishedReels.length > 0 && (
+            <div className="mt-4 pt-3 border-t border-slate-800/80 space-y-2">
+              <span className="text-xs font-semibold text-white block">Published Live Reels ({publishedReels.length}):</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {publishedReels.map((r) => (
+                  <div key={r.id} className="p-2.5 bg-slate-950/70 rounded-lg border border-slate-800 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="font-medium text-white">{r.platform.replace('_', ' ')}</span>
+                      <span className="text-[10px] text-slate-500 font-mono">({new Date(r.publishedAt).toLocaleDateString()})</span>
+                    </div>
+
+                    {r.permalink ? (
+                      <a
+                        href={r.permalink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-brand-400 hover:text-brand-300 flex items-center gap-1 text-[11px]"
+                      >
+                        View Reel <ExternalLink className="w-3 h-3" />
+                      </a>
+                    ) : (
+                      <span className="text-slate-500 text-[10px]">Processing</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </Card>
       </div>
     </div>

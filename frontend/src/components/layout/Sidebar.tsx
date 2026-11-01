@@ -14,6 +14,7 @@ import {
   Sliders,
   Settings,
   Sparkles,
+  Flame,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -24,7 +25,8 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ currentProjectId }) => {
   const mainNav = [
     { label: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { label: 'Create New Video', path: '/create', icon: PlusCircle, highlight: true },
+    { label: 'Daily Reels Autopilot', path: '/automation', icon: Flame, highlight: true },
+    { label: 'Create New Video', path: '/create', icon: PlusCircle },
     { label: 'Video Projects', path: '/projects', icon: Video },
     { label: 'AI Agent Monitor', path: currentProjectId ? `/project/${currentProjectId}/agents` : '/agents', icon: Cpu },
   ];
@@ -39,6 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentProjectId }) => {
   ];
 
   const settingsNav = [
+    { label: 'Social Accounts', path: '/settings/social', icon: Share2 },
     { label: 'AI Providers', path: '/settings/providers', icon: Sliders },
     { label: 'App Settings', path: '/settings/app', icon: Settings },
   ];

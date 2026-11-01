@@ -76,6 +76,7 @@ model User {
   updatedAt       DateTime          @updatedAt
   projects        VideoProject[]
   youtubeAccounts YouTubeAccount[]
+  metaAccounts    MetaAccount[]
 }
 
 model VideoProject {
@@ -117,6 +118,7 @@ model VideoProject {
   assets           GeneratedAsset[]
   renders          VideoRender[]
   publishedVideos  PublishedVideo[]
+  publishedReels   PublishedReel[]
   settings         ProjectSettings?
 
   createdAt        DateTime          @default(now())
@@ -292,5 +294,70 @@ model ProjectSettings {
   
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt
+}
+
+model MetaAccount {
+  id                 String           @id @default(cuid())
+  userId             String?
+  user               User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  pageId             String           @unique
+  pageName           String
+  pageAccessToken    String           @db.Text
+  instagramAccountId String?
+  instagramUsername  String?
+  avatarUrl          String?
+  tokenExpiry        DateTime?
+  isConnected        Boolean          @default(true)
+  
+  publishedReels     PublishedReel[]
+
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+}
+
+model PublishedReel {
+  id               String         @id @default(cuid())
+  projectId        String
+  project          VideoProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  metaAccountId    String
+  metaAccount      MetaAccount    @relation(fields: [metaAccountId], references: [id], onDelete: Cascade)
+  platform         String         // "INSTAGRAM_REELS" or "FACEBOOK_REELS"
+  mediaId          String         @unique // Meta container/video ID
+  title            String
+  description      String         @db.Text
+  permalink        String?
+  userApproved     Boolean        @default(false)
+  status           String         @default("PUBLISHED") // PENDING, PROCESSING, PUBLISHED, FAILED
+  publishedAt      DateTime?
+  
+  viewCount        Int            @default(0)
+  likeCount        Int            @default(0)
+  commentCount     Int            @default(0)
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model AutomationSchedule {
+  id              String    @id @default(cuid())
+  name            String    @default("Daily Viral Reels Engine")
+  niche           String    @default("Tech & AI Facts")
+  language        String    @default("English")
+  visualStyle     String    @default("Cinematic")
+  voiceStyle      String    @default("Deep Narration")
+  targetPlatforms String    @default("[\"YOUTUBE_SHORTS\",\"INSTAGRAM_REELS\",\"FACEBOOK_REELS\"]")
+  format          String    @default("SHORTS")
+  targetDuration  Int       @default(45)
+  cronExpression  String    @default("0 9 * * *")
+  runHourUtc      Int       @default(3)
+  runMinuteUtc    Int       @default(30)
+  autoPublish     Boolean   @default(false)
+  isActive        Boolean   @default(false)
+  lastRunAt       DateTime?
+  lastRunStatus   String?
+  lastProjectId   String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 

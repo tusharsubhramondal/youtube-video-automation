@@ -17,6 +17,8 @@ import { SeoManager } from './pages/SeoManager';
 import { YouTubeIntegration } from './pages/YouTubeIntegration';
 import { ProviderSettings } from './pages/ProviderSettings';
 import { AppSettings } from './pages/AppSettings';
+import { DailyAutomation } from './pages/DailyAutomation';
+import { SocialSettings } from './pages/SocialSettings';
 
 export const App: React.FC = () => {
   return (
@@ -48,8 +50,12 @@ export const App: React.FC = () => {
             <Route path="project/:id/seo" element={<SeoManager />} />
             <Route path="seo" element={<SeoManager />} />
 
+            {/* Daily Autopilot & Reels Factory */}
+            <Route path="automation" element={<DailyAutomation />} />
+
             {/* Integrations & Settings */}
             <Route path="youtube" element={<YouTubeIntegration />} />
+            <Route path="settings/social" element={<SocialSettings />} />
             <Route path="settings/providers" element={<ProviderSettings />} />
             <Route path="settings/app" element={<AppSettings />} />
 
