@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '../services/prisma.service.js';
 import { upload } from '../middlewares/upload.middleware.js';
+import { getProjectStoragePath, getProjectAssetUrl } from '../utils/storage.util.js';
 import path from 'path';
 import fs from 'fs';
 
@@ -17,7 +18,16 @@ router.post('/upload/:projectId', upload.single('file'), async (req: Request, re
       return res.status(400).json({ success: false, error: 'No file uploaded' });
     }
 
-    const relativeUrl = `/uploads/${file.filename}`;
+    const targetDir = getProjectStoragePath(projectId, 'uploads');
+    const targetPath = path.join(targetDir, file.filename);
+    try {
+      fs.renameSync(file.path, targetPath);
+    } catch {
+      fs.copyFileSync(file.path, targetPath);
+      fs.unlinkSync(file.path);
+    }
+    const relativeUrl = getProjectAssetUrl(projectId, 'uploads', file.filename);
+
     const asset = await prisma.generatedAsset.create({
       data: {
         projectId,
@@ -26,7 +36,7 @@ router.post('/upload/:projectId', upload.single('file'), async (req: Request, re
         provider: 'manual_upload',
         prompt: prompt || file.originalname,
         url: relativeUrl,
-        localPath: file.path,
+        localPath: targetPath,
         mimeType: file.mimetype,
         fileSizeBytes: file.size,
       },

@@ -1,6 +1,7 @@
 import { VideoProvider, VideoGenerationOptions } from '../interfaces.js';
 import { ffmpeg } from '../../services/ffmpeg.service.js';
 import { logger } from '../../utils/logger.js';
+import { config } from '../../config/index.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -50,10 +51,10 @@ export class FFmpegVideoProvider implements VideoProvider {
         .output(options.outputPath)
         .on('end', () => {
           const stats = fs.statSync(options.outputPath);
-          const filename = path.basename(options.outputPath);
-          logger.info(`Generated video clip: ${filename} (${stats.size} bytes)`);
+          const relPath = path.relative(config.storage.uploadDir, options.outputPath).replace(/\\/g, '/');
+          logger.info(`Generated video clip: ${relPath} (${stats.size} bytes)`);
           resolve({
-            url: `/uploads/${filename}`,
+            url: `/uploads/${relPath}`,
             localPath: options.outputPath,
             fileSizeBytes: stats.size,
           });

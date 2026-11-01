@@ -222,8 +222,8 @@ export const publishingAgent = {
 
       // Resolve public video URL for Meta ingest
       const publicBase = config.meta.publicBaseUrl || config.frontendUrl || 'http://localhost:5000';
-      const videoFilename = path.basename(project.finalVideoPath);
-      const publicVideoUrl = `${publicBase.replace(/\/+$/, '')}/renders/${videoFilename}`;
+      const relVideoPath = path.relative(config.storage.renderDir, project.finalVideoPath).replace(/\\/g, '/');
+      const publicVideoUrl = `${publicBase.replace(/\/+$/, '')}/renders/${relVideoPath}`;
 
       const textCaption = params.caption || project.seoDescription || project.title;
       const textTitle = params.title || project.seoTitle || project.title;

@@ -2,6 +2,7 @@ import { prisma } from '../services/prisma.service.js';
 import { getVideoProvider } from '../providers/video/index.js';
 import { logger } from '../utils/logger.js';
 import { config } from '../config/index.js';
+import { getProjectStoragePath, resolveAssetLocalPath } from '../utils/storage.util.js';
 import path from 'path';
 import fs from 'fs';
 
@@ -43,30 +44,29 @@ export const videoAgent = {
       for (const scene of scenesToProcess) {
         // Check if an externally imported/uploaded video clip is already associated with this scene
         if (scene.videoUrl && !sceneId) {
-          const existingFilename = path.basename(scene.videoUrl);
-          const existingPath = path.join(config.storage.uploadDir, existingFilename);
-          if (fs.existsSync(existingPath) && existingPath.endsWith('.mp4')) {
-            logger.info(`Scene ${scene.sceneNumber} has existing imported clip: ${existingFilename}. Preserving external asset.`);
+          const resolvedVideoPath = resolveAssetLocalPath(scene.videoUrl);
+          if (resolvedVideoPath && resolvedVideoPath.endsWith('.mp4')) {
+            logger.info(`Scene ${scene.sceneNumber} has existing imported clip: ${path.basename(resolvedVideoPath)}. Preserving external asset.`);
             results.push({
               sceneNumber: scene.sceneNumber,
               url: scene.videoUrl,
-              localPath: existingPath,
+              localPath: resolvedVideoPath,
               durationSeconds: scene.duration || 5.0,
             });
             continue;
           }
         }
 
-        const filename = `clip_${project.id}_${scene.sceneNumber}_${Date.now()}.mp4`;
-        const outputPath = path.join(config.storage.uploadDir, filename);
+        const videoDir = getProjectStoragePath(project.id, 'video');
+        const filename = `clip_scene_${scene.sceneNumber}_${Date.now()}.mp4`;
+        const outputPath = path.join(videoDir, filename);
 
         // Find local image path if image exists
         let localImagePath: string | undefined;
         if (scene.imageUrl) {
-          const imgFilename = path.basename(scene.imageUrl);
-          const candidatePath = path.join(config.storage.uploadDir, imgFilename);
-          if (fs.existsSync(candidatePath)) {
-            localImagePath = candidatePath;
+          const resolvedImg = resolveAssetLocalPath(scene.imageUrl);
+          if (resolvedImg) {
+            localImagePath = resolvedImg;
           }
         }
 

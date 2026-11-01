@@ -4,6 +4,7 @@ import path from 'path';
 import { ImageProvider, ImageGenerationOptions } from '../interfaces.js';
 import { logger } from '../../utils/logger.js';
 import { prisma } from '../../services/prisma.service.js';
+import { config } from '../../config/index.js';
 
 export class PollinationsImageProvider implements ImageProvider {
   name = 'Pollinations AI (Flux / Turbo / Sana)';
@@ -78,12 +79,12 @@ export class PollinationsImageProvider implements ImageProvider {
         fs.writeFileSync(options.outputPath, buffer);
 
         const stats = fs.statSync(options.outputPath);
-        const filename = path.basename(options.outputPath);
+        const relPath = path.relative(config.storage.uploadDir, options.outputPath).replace(/\\/g, '/');
 
         logger.info(`[Pollinations] Successfully generated AI image (${stats.size} bytes)`);
 
         return {
-          url: `/uploads/${filename}`,
+          url: `/uploads/${relPath}`,
           localPath: options.outputPath,
           fileSizeBytes: stats.size,
         };

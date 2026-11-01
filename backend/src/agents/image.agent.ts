@@ -2,6 +2,7 @@ import { prisma } from '../services/prisma.service.js';
 import { getImageProvider } from '../providers/image/index.js';
 import { logger } from '../utils/logger.js';
 import { config } from '../config/index.js';
+import { getProjectStoragePath } from '../utils/storage.util.js';
 import path from 'path';
 
 export const imageAgent = {
@@ -45,8 +46,9 @@ export const imageAgent = {
 
       for (const scene of scenesToProcess) {
         logger.info(`Generating image for scene ${scene.sceneNumber}: "${scene.visualPrompt.substring(0, 40)}..."`);
-        const filename = `scene_${project.id}_${scene.sceneNumber}_${Date.now()}.png`;
-        const outputPath = path.join(config.storage.uploadDir, filename);
+        const imageDir = getProjectStoragePath(project.id, 'images');
+        const filename = `scene_${scene.sceneNumber}_${Date.now()}.png`;
+        const outputPath = path.join(imageDir, filename);
 
         // Enhance prompt with character consistency & coherent artistic styling
         const consistencyDirective = `consistent character design and continuity, coherent wardrobe and identity, ${project.visualStyle} aesthetic, cinematic lighting`;

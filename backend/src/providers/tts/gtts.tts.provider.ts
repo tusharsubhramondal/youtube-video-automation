@@ -4,6 +4,7 @@ import path from 'path';
 import { TTSProvider, TTSOptions } from '../interfaces.js';
 import { ffmpeg } from '../../services/ffmpeg.service.js';
 import { logger } from '../../utils/logger.js';
+import { config } from '../../config/index.js';
 
 export class GoogleTTSProvider implements TTSProvider {
   name = 'Google Free TTS Engine';
@@ -31,10 +32,10 @@ export class GoogleTTSProvider implements TTSProvider {
 
       // Measure duration with ffprobe
       const duration = await this.getAudioDuration(options.outputPath);
-      const filename = path.basename(options.outputPath);
+      const relPath = path.relative(config.storage.uploadDir, options.outputPath).replace(/\\/g, '/');
 
       return {
-        url: `/uploads/${filename}`,
+        url: `/uploads/${relPath}`,
         localPath: options.outputPath,
         durationSeconds: duration,
       };

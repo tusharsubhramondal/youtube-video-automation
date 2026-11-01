@@ -4,6 +4,7 @@ import path from 'path';
 import { ImageProvider, ImageGenerationOptions } from '../interfaces.js';
 import { ffmpeg } from '../../services/ffmpeg.service.js';
 import { logger } from '../../utils/logger.js';
+import { config } from '../../config/index.js';
 
 export class RealPhotoProvider implements ImageProvider {
   name = 'Real Photographic Scene Engine';
@@ -123,10 +124,10 @@ export class RealPhotoProvider implements ImageProvider {
       });
 
       const stats = fs.statSync(options.outputPath);
-      const filename = path.basename(options.outputPath);
+      const relPath = path.relative(config.storage.uploadDir, options.outputPath).replace(/\\/g, '/');
 
       return {
-        url: `/uploads/${filename}`,
+        url: `/uploads/${relPath}`,
         localPath: options.outputPath,
         fileSizeBytes: stats.size,
       };

@@ -112,13 +112,13 @@ export class CloudflareImageProvider implements ImageProvider {
       }
 
       fs.writeFileSync(options.outputPath, imageBuffer);
-      const filename = path.basename(options.outputPath);
+      const relPath = path.relative(config.storage.uploadDir, options.outputPath).replace(/\\/g, '/');
       const fileSizeBytes = imageBuffer.length;
 
-      logger.info(`[CloudflareAI] Successfully generated image (${fileSizeBytes} bytes): ${filename}`);
+      logger.info(`[CloudflareAI] Successfully generated image (${fileSizeBytes} bytes): ${relPath}`);
 
       return {
-        url: `/uploads/${filename}`,
+        url: `/uploads/${relPath}`,
         localPath: options.outputPath,
         provider: `Cloudflare Workers AI (${model})`,
         model,

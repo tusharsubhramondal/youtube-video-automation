@@ -4,6 +4,7 @@ import path from 'path';
 import { ImageProvider, ImageGenerationOptions } from '../interfaces.js';
 import { logger } from '../../utils/logger.js';
 import { prisma } from '../../services/prisma.service.js';
+import { config } from '../../config/index.js';
 
 export class OpenAIImageProvider implements ImageProvider {
   name = 'OpenAI DALL-E 3 Image Engine';
@@ -65,10 +66,10 @@ export class OpenAIImageProvider implements ImageProvider {
     fs.writeFileSync(options.outputPath, buffer);
 
     const stats = fs.statSync(options.outputPath);
-    const filename = path.basename(options.outputPath);
+    const relPath = path.relative(config.storage.uploadDir, options.outputPath).replace(/\\/g, '/');
 
     return {
-      url: `/uploads/${filename}`,
+      url: `/uploads/${relPath}`,
       localPath: options.outputPath,
       fileSizeBytes: stats.size,
     };

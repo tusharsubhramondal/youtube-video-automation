@@ -3,6 +3,7 @@ import { ffmpeg } from '../services/ffmpeg.service.js';
 import { config } from '../config/index.js';
 import { logger } from '../utils/logger.js';
 import { SubtitleService } from '../services/subtitle.service.js';
+import { getProjectStoragePath, getProjectAssetUrl, resolveAssetLocalPath } from '../utils/storage.util.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -69,9 +70,10 @@ export const editingAgent = {
       const voiceVol = options?.voiceVolume ?? project.settings?.voiceVolume ?? 1.0;
       const bgMusicVol = options?.bgMusicVolume ?? project.settings?.backgroundMusicVolume ?? 0.15;
 
-      const outputFilename = `final_${project.id}_${Date.now()}.mp4`;
-      const outputPath = path.join(config.storage.renderDir, outputFilename);
-      const outputUrl = `/renders/${outputFilename}`;
+      const renderDir = getProjectStoragePath(project.id, 'renders');
+      const outputFilename = `final_${Date.now()}.mp4`;
+      const outputPath = path.join(renderDir, outputFilename);
+      const outputUrl = getProjectAssetUrl(project.id, 'renders', outputFilename);
 
       const totalEstimatedDuration = project.scenes.reduce((acc, s) => acc + (s.duration || 5), 0);
 
@@ -79,10 +81,12 @@ export const editingAgent = {
       // 1. SUBTITLE GENERATION (.SRT & .VTT)
       // -------------------------------------------------------------
       logger.info('[EditingAgent] Step 1/4: Generating synchronized subtitle files (.srt & .vtt)...');
-      const srtFilename = `subtitles_${project.id}_${Date.now()}.srt`;
-      const vttFilename = `subtitles_${project.id}_${Date.now()}.vtt`;
-      const srtPath = path.join(config.storage.uploadDir, srtFilename);
-      const vttPath = path.join(config.storage.uploadDir, vttFilename);
+      const subDir = getProjectStoragePath(project.id, 'subtitles');
+      const srtFilename = `subtitles_${Date.now()}.srt`;
+      const vttFilename = `subtitles_${Date.now()}.vtt`;
+      const srtPath = path.join(subDir, srtFilename);
+      const vttPath = path.join(subDir, vttFilename);
+      const srtUrl = getProjectAssetUrl(project.id, 'subtitles', srtFilename);
 
       const subtitleScenes = project.scenes.map((s) => ({
         sceneNumber: s.sceneNumber,
@@ -100,7 +104,7 @@ export const editingAgent = {
           type: 'SUBTITLE',
           provider: 'AutoTube Subtitle Engine',
           prompt: `Synchronized subtitles for ${project.title}`,
-          url: `/uploads/${srtFilename}`,
+          url: srtUrl,
           localPath: srtPath,
         },
       });
@@ -118,15 +122,13 @@ export const editingAgent = {
 
         let sourceFile: string | null = null;
         if (scene.videoUrl) {
-          const fn = path.basename(scene.videoUrl);
-          const p = path.join(config.storage.uploadDir, fn);
-          if (fs.existsSync(p)) sourceFile = p;
+          const resolved = resolveAssetLocalPath(scene.videoUrl);
+          if (resolved) sourceFile = resolved;
         }
 
         if (!sourceFile && scene.imageUrl) {
-          const fn = path.basename(scene.imageUrl);
-          const p = path.join(config.storage.uploadDir, fn);
-          if (fs.existsSync(p)) sourceFile = p;
+          const resolved = resolveAssetLocalPath(scene.imageUrl);
+          if (resolved) sourceFile = resolved;
         }
 
         await new Promise<void>((resolve, reject) => {
@@ -201,9 +203,8 @@ export const editingAgent = {
       for (const scene of project.scenes) {
         let audioFile: string | null = null;
         if (scene.audioUrl) {
-          const fn = path.basename(scene.audioUrl);
-          const p = path.join(config.storage.uploadDir, fn);
-          if (fs.existsSync(p)) audioFile = p;
+          const resolved = resolveAssetLocalPath(scene.audioUrl);
+          if (resolved) audioFile = resolved;
         }
 
         const segmentPath = path.join(config.storage.tempDir, `seg_${project.id}_s${scene.sceneNumber}_${Date.now()}.mp3`);

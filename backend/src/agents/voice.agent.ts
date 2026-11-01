@@ -2,6 +2,7 @@ import { prisma } from '../services/prisma.service.js';
 import { getTTSProvider } from '../providers/tts/index.js';
 import { logger } from '../utils/logger.js';
 import { config } from '../config/index.js';
+import { getProjectStoragePath } from '../utils/storage.util.js';
 import path from 'path';
 
 export const voiceAgent = {
@@ -37,8 +38,9 @@ export const voiceAgent = {
       const results = [];
 
       for (const scene of scenesToProcess) {
-        const filename = `voice_${project.id}_${scene.sceneNumber}_${Date.now()}.mp3`;
-        const outputPath = path.join(config.storage.uploadDir, filename);
+        const audioDir = getProjectStoragePath(project.id, 'audio');
+        const filename = `voice_scene_${scene.sceneNumber}_${Date.now()}.mp3`;
+        const outputPath = path.join(audioDir, filename);
 
         const ttsResult = await ttsProvider.generateSpeech({
           text: scene.narrationText,

@@ -1,6 +1,9 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '../services/prisma.service.js';
+import { config } from '../config/index.js';
 import { z } from 'zod';
+import fs from 'fs';
+import path from 'path';
 
 const router = Router();
 
@@ -154,7 +157,18 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
   try {
     const { id } = req.params;
     await prisma.videoProject.delete({ where: { id } });
-    res.json({ success: true, message: 'Project deleted successfully' });
+
+    // Clean up project-specific storage folders if they exist
+    const uploadProjectDir = path.join(config.storage.uploadDir, 'projects', id);
+    const renderProjectDir = path.join(config.storage.renderDir, 'projects', id);
+    if (fs.existsSync(uploadProjectDir)) {
+      try { fs.rmSync(uploadProjectDir, { recursive: true, force: true }); } catch {}
+    }
+    if (fs.existsSync(renderProjectDir)) {
+      try { fs.rmSync(renderProjectDir, { recursive: true, force: true }); } catch {}
+    }
+
+    res.json({ success: true, message: 'Project and all its associated assets deleted successfully' });
   } catch (error) {
     next(error);
   }

@@ -4,6 +4,7 @@ import path from 'path';
 import { TTSProvider, TTSOptions } from '../interfaces.js';
 import { ffmpeg } from '../../services/ffmpeg.service.js';
 import { logger } from '../../utils/logger.js';
+import { config } from '../../config/index.js';
 
 export const VOICE_STYLE_TO_EDGE_VOICE: Record<string, string> = {
   // Common style descriptions
@@ -70,12 +71,12 @@ export class EdgeTTSProvider implements TTSProvider {
       });
 
       const duration = await this.getAudioDuration(options.outputPath, options.text);
-      const filename = path.basename(options.outputPath);
+      const relPath = path.relative(config.storage.uploadDir, options.outputPath).replace(/\\/g, '/');
 
-      logger.info(`[EdgeTTS] Successfully synthesized ${duration.toFixed(2)}s audio: ${filename}`);
+      logger.info(`[EdgeTTS] Successfully synthesized ${duration.toFixed(2)}s audio: ${relPath}`);
 
       return {
-        url: `/uploads/${filename}`,
+        url: `/uploads/${relPath}`,
         localPath: options.outputPath,
         durationSeconds: duration,
       };

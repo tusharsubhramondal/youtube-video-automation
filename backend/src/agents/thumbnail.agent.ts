@@ -3,6 +3,7 @@ import { getLLMProvider } from '../providers/llm/index.js';
 import { getImageProvider } from '../providers/image/index.js';
 import { logger } from '../utils/logger.js';
 import { config } from '../config/index.js';
+import { getProjectStoragePath } from '../utils/storage.util.js';
 import path from 'path';
 
 export const thumbnailAgent = {
@@ -35,8 +36,9 @@ export const thumbnailAgent = {
       const thumbConcept = await llm.generateThumbnailPrompt(project.topic, project.visualStyle);
       const promptToUse = customPrompt || thumbConcept.prompt;
 
-      const filename = `thumbnail_${project.id}_${Date.now()}.png`;
-      const outputPath = path.join(config.storage.uploadDir, filename);
+      const thumbDir = getProjectStoragePath(project.id, 'thumbnails');
+      const filename = `thumbnail_${Date.now()}.png`;
+      const outputPath = path.join(thumbDir, filename);
 
       const imgResult = await imageProvider.generateImage({
         prompt: promptToUse,
