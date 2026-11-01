@@ -7,15 +7,15 @@ export class GeminiProvider implements LLMProvider {
   private genAI: GoogleGenerativeAI;
   private modelName: string;
 
-  constructor(apiKey: string, modelName = 'gemini-2.0-flash') {
+  constructor(apiKey: string, modelName = 'gemini-flash-latest') {
     this.genAI = new GoogleGenerativeAI(apiKey);
-    // Sanitize any legacy or fictitious model names stored in DB
     this.modelName = this.sanitizeModelName(modelName);
   }
 
   private sanitizeModelName(name?: string): string {
-    if (!name || name.startsWith('gemini-3') || name.startsWith('gemini-2.5')) {
-      return 'gemini-2.0-flash';
+    // If empty or if model is one of the deprecated 1.5 / 2.0 / 2.5 models that return 404
+    if (!name || name.includes('1.5') || name.includes('2.0') || name.includes('2.5')) {
+      return 'gemini-flash-latest';
     }
     return name;
   }
@@ -28,9 +28,9 @@ export class GeminiProvider implements LLMProvider {
     const candidateModels = Array.from(
       new Set([
         this.sanitizeModelName(this.modelName),
-        'gemini-2.0-flash',
-        'gemini-1.5-flash',
-        'gemini-1.5-pro',
+        'gemini-flash-latest',
+        'gemini-3.5-flash-lite',
+        'gemini-3.8-flash',
       ])
     ).filter(Boolean);
 

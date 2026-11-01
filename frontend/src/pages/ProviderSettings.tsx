@@ -51,7 +51,7 @@ export const ProviderSettings: React.FC = () => {
 
   // Gemini State
   const [geminiKey, setGeminiKey] = useState('');
-  const [geminiModel, setGeminiModel] = useState('gemini-2.0-flash');
+  const [geminiModel, setGeminiModel] = useState('gemini-flash-latest');
   const [isSavingGemini, setIsSavingGemini] = useState(false);
 
   // OpenAI State
@@ -72,11 +72,11 @@ export const ProviderSettings: React.FC = () => {
 
   // Agent Model Routing State
   const [agentRouting, setAgentRouting] = useState<Record<string, { provider: string; model?: string }>>({
-    RESEARCH: { provider: 'gemini', model: 'gemini-2.0-flash' },
-    SCRIPT: { provider: 'gemini', model: 'gemini-2.0-flash' },
+    RESEARCH: { provider: 'gemini', model: 'gemini-flash-latest' },
+    SCRIPT: { provider: 'gemini', model: 'gemini-flash-latest' },
     IMAGE: { provider: 'pollinations', model: 'flux' },
     THUMBNAIL: { provider: 'openai', model: 'dall-e-3' },
-    SEO: { provider: 'gemini', model: 'gemini-2.0-flash' },
+    SEO: { provider: 'gemini', model: 'gemini-flash-latest' },
   });
   const [isSavingRouting, setIsSavingRouting] = useState(false);
 
@@ -109,7 +109,8 @@ export const ProviderSettings: React.FC = () => {
       if (geminiProv) {
         setGeminiKey(geminiProv.apiKey || '');
         const loadedModel = geminiProv.modelName;
-        setGeminiModel(loadedModel && !loadedModel.startsWith('gemini-3') ? loadedModel : 'gemini-2.0-flash');
+        const isDeprecated = loadedModel && (loadedModel.includes('1.5') || loadedModel.includes('2.0') || loadedModel.includes('2.5'));
+        setGeminiModel(loadedModel && !isDeprecated ? loadedModel : 'gemini-flash-latest');
       }
 
       // OpenAI
@@ -545,13 +546,13 @@ export const ProviderSettings: React.FC = () => {
                   <option value="openai">OpenAI</option>
                 </select>
                 <select
-                  value={agentRouting.RESEARCH?.model || 'gemini-2.0-flash'}
+                  value={agentRouting.RESEARCH?.model || 'gemini-flash-latest'}
                   onChange={(e) => updateRouting('RESEARCH', 'model', e.target.value)}
                   className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:ring-1 focus:ring-blue-500"
                 >
-                  <option value="gemini-2.0-flash">gemini-2.0-flash (Recommended • Fast & High Quality)</option>
-                  <option value="gemini-1.5-flash">gemini-1.5-flash (High Volume)</option>
-                  <option value="gemini-1.5-pro">gemini-1.5-pro (Deep Research)</option>
+                  <option value="gemini-flash-latest">gemini-flash-latest (Recommended • High Speed)</option>
+                  <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Ultra Fast)</option>
+                  <option value="gemini-3.8-flash">gemini-3.8-flash (Flagship)</option>
                   <option value="gpt-4o-mini">gpt-4o-mini (Speedy OpenAI)</option>
                   <option value="gpt-4o">gpt-4o (Deep Reasoning Flagship)</option>
                 </select>
@@ -585,13 +586,13 @@ export const ProviderSettings: React.FC = () => {
                   <option value="openai">OpenAI</option>
                 </select>
                 <select
-                  value={agentRouting.SCRIPT?.model || 'gemini-2.0-flash'}
+                  value={agentRouting.SCRIPT?.model || 'gemini-flash-latest'}
                   onChange={(e) => updateRouting('SCRIPT', 'model', e.target.value)}
                   className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:ring-1 focus:ring-emerald-500"
                 >
-                  <option value="gemini-2.0-flash">gemini-2.0-flash (Recommended • Viral Hooks)</option>
-                  <option value="gemini-1.5-flash">gemini-1.5-flash (Fast)</option>
-                  <option value="gemini-1.5-pro">gemini-1.5-pro (Master Storyteller)</option>
+                  <option value="gemini-flash-latest">gemini-flash-latest (Recommended • Viral Hooks)</option>
+                  <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Fast)</option>
+                  <option value="gemini-3.8-flash">gemini-3.8-flash (Master Storyteller)</option>
                   <option value="gpt-4o">gpt-4o (Elite Storyteller)</option>
                   <option value="gpt-4o-mini">gpt-4o-mini</option>
                 </select>
@@ -709,13 +710,13 @@ export const ProviderSettings: React.FC = () => {
                   <option value="openai">OpenAI</option>
                 </select>
                 <select
-                  value={agentRouting.SEO?.model || 'gemini-2.0-flash'}
+                  value={agentRouting.SEO?.model || 'gemini-flash-latest'}
                   onChange={(e) => updateRouting('SEO', 'model', e.target.value)}
                   className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:ring-1 focus:ring-cyan-500"
                 >
-                  <option value="gemini-2.0-flash">gemini-2.0-flash (Recommended • Ultra Fast)</option>
-                  <option value="gemini-1.5-flash">gemini-1.5-flash</option>
-                  <option value="gemini-1.5-pro">gemini-1.5-pro (Deep SEO)</option>
+                  <option value="gemini-flash-latest">gemini-flash-latest (Recommended • Ultra Fast)</option>
+                  <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite</option>
+                  <option value="gemini-3.8-flash">gemini-3.8-flash (Deep SEO)</option>
                   <option value="gpt-4o-mini">gpt-4o-mini</option>
                   <option value="gpt-4o">gpt-4o</option>
                 </select>
@@ -801,9 +802,9 @@ export const ProviderSettings: React.FC = () => {
                       onChange={(e) => setGeminiModel(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white focus:ring-1 focus:ring-blue-500"
                     >
-                      <option value="gemini-2.0-flash">gemini-2.0-flash (Recommended • Next-Gen Flash)</option>
-                      <option value="gemini-1.5-flash">gemini-1.5-flash (High Speed & 1M Context)</option>
-                      <option value="gemini-1.5-pro">gemini-1.5-pro (Advanced Reasoning Flagship)</option>
+                      <option value="gemini-flash-latest">gemini-flash-latest (Recommended • High Speed)</option>
+                      <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Ultra Fast Lightweight)</option>
+                      <option value="gemini-3.8-flash">gemini-3.8-flash (Flagship Google Model)</option>
                     </select>
                   </div>
                 </div>
