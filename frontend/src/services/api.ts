@@ -87,7 +87,7 @@ export const projectService = {
     const res = await api.get(`/projects/${id}`);
     return res.data.data;
   },
-  createProject: async (data: Partial<VideoProject>): Promise<VideoProject> => {
+  createProject: async (data: Partial<VideoProject> & { enableSubtitles?: boolean }): Promise<VideoProject> => {
     const res = await api.post('/projects', data);
     return res.data.data;
   },

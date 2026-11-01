@@ -13,6 +13,7 @@ const createProjectSchema = z.object({
   format: z.enum(['SHORTS', 'REGULAR']).default('REGULAR'),
   visualStyle: z.string().default('Cinematic'),
   voiceStyle: z.string().default('Deep Narration'),
+  enableSubtitles: z.boolean().optional().default(true),
 });
 
 // GET all projects
@@ -117,7 +118,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
           create: {
             resolution: '1080p',
             fps: 30,
-            enableSubtitles: true,
+            enableSubtitles: validated.enableSubtitles ?? true,
             backgroundMusicVolume: 0.15,
             voiceVolume: 1.0,
           },

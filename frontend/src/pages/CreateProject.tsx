@@ -8,6 +8,7 @@ import {
   Zap,
   Volume2,
   Loader2,
+  Subtitles,
 } from 'lucide-react';
 import { projectService, agentService, voiceService } from '../services/api';
 import { Button } from '../components/common/Button';
@@ -28,6 +29,7 @@ export const CreateProject: React.FC = () => {
   const [isPreviewingVoice, setIsPreviewingVoice] = useState(false);
   const [playingAudio, setPlayingAudio] = useState<HTMLAudioElement | null>(null);
   const [autoRunPipeline, setAutoRunPipeline] = useState(true);
+  const [enableSubtitles, setEnableSubtitles] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -117,6 +119,7 @@ export const CreateProject: React.FC = () => {
         targetDuration: Number(targetDuration),
         visualStyle,
         voiceStyle,
+        enableSubtitles,
       });
 
       localStorage.setItem('activeProjectId', project.id);
@@ -363,6 +366,32 @@ export const CreateProject: React.FC = () => {
             </p>
           </div>
         </Card>
+
+        {/* Caption & Subtitles Option */}
+        <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl flex items-center justify-between transition-colors hover:border-slate-700">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-lg bg-slate-800 text-brand-400">
+              <Subtitles className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-semibold text-white">Burn-In Subtitles & Narration</h4>
+                <span className="text-[10px] bg-brand-500/10 text-brand-400 px-2 py-0.5 rounded font-medium border border-brand-500/20">
+                  {enableSubtitles ? 'Enabled' : 'Disabled (Clean Visuals)'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Overlays synchronized narration text directly on the video. Uncheck if you want clean video without text.
+              </p>
+            </div>
+          </div>
+          <input
+            type="checkbox"
+            checked={enableSubtitles}
+            onChange={(e) => setEnableSubtitles(e.target.checked)}
+            className="w-5 h-5 accent-brand-500 rounded cursor-pointer"
+          />
+        </div>
 
         {/* Automation Execution Trigger */}
         <div className="p-4 bg-brand-950/30 border border-brand-800/40 rounded-xl flex items-center justify-between">
