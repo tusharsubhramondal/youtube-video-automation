@@ -283,7 +283,9 @@ export const editingAgent = {
           const escapedSrtPath = srtPath.replace(/\\/g, '/').replace(':', '\\:');
           const primaryColorHex = options?.subtitleColor ? options.subtitleColor.replace('#', '') : 'FFFFFF';
           const verticalMargin = isShorts ? 190 : 35; // 190px safe zone clearance for Reels/Shorts UI
-          videoFilters.push(`subtitles='${escapedSrtPath}':force_style='FontSize=${subtitleFontSize},Bold=1,PrimaryColour=&H00${primaryColorHex},OutlineColour=&H00000000,BorderStyle=3,BackColour=&H80000000,MarginV=${verticalMargin}'`);
+          const isBengali = project.language?.toLowerCase().includes('bengali') || project.language === 'bn' || project.language === 'বাংলা';
+          const fontName = isBengali ? 'Nirmala UI' : (project.settings?.subtitleFont || 'Arial');
+          videoFilters.push(`subtitles='${escapedSrtPath}':force_style='FontName=${fontName},FontSize=${subtitleFontSize},Bold=1,PrimaryColour=&H00${primaryColorHex},OutlineColour=&H00000000,BorderStyle=3,BackColour=&H80000000,MarginV=${verticalMargin}'`);
         }
 
         // Ensure explicit square pixel aspect ratio (SAR 1:1) and proper DAR (9:16 for Shorts, 16:9 for Regular)

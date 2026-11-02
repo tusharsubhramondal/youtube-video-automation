@@ -102,6 +102,16 @@ Return a valid JSON object matching this schema:
         ? Math.max(3, Math.round(params.targetDuration / 5))
         : Math.max(4, Math.round(params.targetDuration / 12));
 
+      const isBengali = params.language?.toLowerCase().includes('bengali') || params.language === 'bn' || params.language === 'বাংলা';
+      const languageInstruction = isBengali
+        ? `CRITICAL LANGUAGE REQUIREMENT:
+- "title", "hook", "callToAction", and ALL "narrationText" MUST be written in natural, fluent, and highly engaging BENGALI script (বাংলায়).
+- Use natural conversational Bengali with rich storytelling and mystery tone.
+- CRITICAL EXCEPTION: Each "visualPrompt" MUST ALWAYS BE WRITTEN IN DETAILED ENGLISH for the AI text-to-image generator (FLUX), describing lighting, subjects, atmosphere, and textures in English.`
+        : `CRITICAL LANGUAGE REQUIREMENT:
+- All narrationText, title, hook, and callToAction MUST be in "${params.language}".
+- CRITICAL EXCEPTION: Each "visualPrompt" MUST ALWAYS BE IN ENGLISH for the AI text-to-image generator.`;
+
       const prompt = `You are an elite YouTube Scriptwriter and Director.
 Craft a scene-by-scene production script for a YouTube video:
 Topic: "${params.topic}"
@@ -109,8 +119,10 @@ Format: "${params.format}" (${isShorts ? '9:16 vertical fast-paced hook' : '16:9
 Target Duration: ${params.targetDuration} seconds
 Visual Style: "${params.visualStyle}"
 Voice Style: "${params.voiceStyle}"
-Language: "${params.language}"
+Target Language: "${params.language}"
 Target Scene Count: approximately ${sceneCount} scenes.
+
+${languageInstruction}
 
 Research Context:
 Angle: ${params.research.angle}
@@ -123,8 +135,8 @@ Return a valid JSON object matching this exact schema:
   "scenes": [
     {
       "sceneNumber": number,
-      "narrationText": string (exact spoken voiceover words),
-      "visualPrompt": string (vivid text-to-image prompt tailored for ${params.visualStyle} style),
+      "narrationText": string (exact spoken voiceover words in the requested language),
+      "visualPrompt": string (vivid text-to-image prompt in ENGLISH tailored for ${params.visualStyle} style),
       "cameraMovement": string (e.g., "Slow zoom in", "Pan right across landscape", "High angle aerial descent"),
       "transition": string (e.g., "fade", "wipe", "cut"),
       "durationSeconds": number (estimated duration of this scene in seconds, e.g. 5)
@@ -146,6 +158,7 @@ Return a valid JSON object matching this exact schema:
     topic: string;
     script: ScriptResult;
     category: string;
+    language?: string;
   }): Promise<{
     titles: string[];
     description: string;
@@ -154,12 +167,27 @@ Return a valid JSON object matching this exact schema:
     thumbnailTextIdeas: string[];
   }> {
     try {
+      const isBengali = params.language?.toLowerCase().includes('bengali') || params.language === 'bn' || params.language === 'বাংলা';
+      const languageDirective = isBengali
+        ? `CRITICAL LANGUAGE REQUIREMENT:
+- All 5 "titles" MUST be written in BENGALI (বাংলা) with high CTR, intriguing mystery/storytelling angle.
+- The "description" MUST be written in BENGALI (বাংলা) including hook, chapter summary, and call to action.
+- "tags" should include both high-intent Bengali search terms (e.g. রহস্য, অজানা তথ্য, বাংলা রহস্য, সত্য ঘটনা) and broad English keywords.
+- "hashtags" should include trending Bengali and global hashtags (e.g. #রহস্য #বাংলাডকুমেন্টারি #Shorts #Mystery).
+- "thumbnailTextIdeas" MUST be punchy 2-4 word Bengali phrases.`
+        : params.language && params.language !== 'English'
+          ? `CRITICAL LANGUAGE REQUIREMENT: All titles, description, and thumbnailTextIdeas MUST be written in "${params.language}".`
+          : ``;
+
       const prompt = `You are a YouTube SEO Master.
 Generate hyper-optimized YouTube metadata for this video:
 Topic: "${params.topic}"
 Category: "${params.category}"
 Script Title: "${params.script.title}"
 Script Hook: "${params.script.hook}"
+${params.language ? `Language: "${params.language}"` : ''}
+
+${languageDirective}
 
 Return valid JSON with:
 {

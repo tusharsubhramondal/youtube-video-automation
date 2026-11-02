@@ -42,10 +42,25 @@ export const voiceAgent = {
         const filename = `voice_scene_${scene.sceneNumber}_${Date.now()}.mp3`;
         const outputPath = path.join(audioDir, filename);
 
+        const isBengali = project.language?.toLowerCase().includes('bengali') || project.language === 'bn' || project.language === 'বাংলা';
+        const ttsLanguage = isBengali
+          ? 'bn-IN'
+          : project.language === 'Spanish'
+            ? 'es-ES'
+            : project.language === 'French'
+              ? 'fr-FR'
+              : project.language === 'German'
+                ? 'de-DE'
+                : project.language === 'Hindi'
+                  ? 'hi-IN'
+                  : project.language === 'Japanese'
+                    ? 'ja-JP'
+                    : 'en';
+
         const ttsResult = await ttsProvider.generateSpeech({
           text: scene.narrationText,
           voiceStyle: project.voiceStyle,
-          language: project.language === 'English' ? 'en' : 'en',
+          language: ttsLanguage,
           outputPath,
         });
 

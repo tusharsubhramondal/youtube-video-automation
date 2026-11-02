@@ -32,6 +32,20 @@ export const VOICE_STYLE_TO_EDGE_VOICE: Record<string, string> = {
   'German': 'de-DE-ConradNeural',
   'Hindi': 'hi-IN-MadhurNeural',
   'Japanese': 'ja-JP-KeitaNeural',
+
+  // Bengali neural voices (India & Bangladesh)
+  'Bengali': 'bn-IN-BashkarNeural',
+  'Bengali (Bashkar)': 'bn-IN-BashkarNeural',
+  'Deep Storyteller (Bashkar - বাংলা)': 'bn-IN-BashkarNeural',
+  'Bashkar': 'bn-IN-BashkarNeural',
+  'Bengali (Tanishaa)': 'bn-IN-TanishaaNeural',
+  'Calm Narrator (Tanishaa - বাংলা)': 'bn-IN-TanishaaNeural',
+  'Tanishaa': 'bn-IN-TanishaaNeural',
+  'Pradeep': 'bn-BD-PradeepNeural',
+  'Nabanita': 'bn-BD-NabanitaNeural',
+  'bn-IN': 'bn-IN-BashkarNeural',
+  'bn': 'bn-IN-BashkarNeural',
+  'বাংলা': 'bn-IN-BashkarNeural',
 };
 
 export class EdgeTTSProvider implements TTSProvider {
@@ -87,6 +101,8 @@ export class EdgeTTSProvider implements TTSProvider {
   }
 
   private resolveVoiceId(voiceStyle?: string, language?: string): string {
+    const isBengaliLang = language?.toLowerCase().includes('bengali') || language === 'bn' || language === 'bn-IN' || language === 'বাংলা';
+
     if (voiceStyle) {
       // If directly a Neural voice ID
       if (voiceStyle.includes('Neural')) {
@@ -104,6 +120,14 @@ export class EdgeTTSProvider implements TTSProvider {
           return id;
         }
       }
+    }
+
+    // If language is Bengali, default to Bashkar or Tanishaa
+    if (isBengaliLang) {
+      if (voiceStyle && (voiceStyle.toLowerCase().includes('female') || voiceStyle.toLowerCase().includes('tanishaa') || voiceStyle.toLowerCase().includes('calm'))) {
+        return 'bn-IN-TanishaaNeural';
+      }
+      return 'bn-IN-BashkarNeural';
     }
 
     if (language && VOICE_STYLE_TO_EDGE_VOICE[language]) {

@@ -31,6 +31,7 @@ export const seoAgent = {
       const seoData = await llm.generateSeoMetadata({
         topic: project.topic,
         category: project.category,
+        language: project.language,
         script: {
           title: project.title,
           hook: project.researchNotes || '',

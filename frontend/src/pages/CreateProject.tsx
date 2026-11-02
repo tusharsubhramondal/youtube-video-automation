@@ -101,6 +101,8 @@ export const CreateProject: React.FC = () => {
   ];
 
   const voiceStyles = [
+    'Deep Storyteller (Bashkar - বাংলা)',
+    'Calm Narrator (Tanishaa - বাংলা)',
     'Deep Narration',
     'Casual & Friendly',
     'High Energy & Enthusiastic',
@@ -208,14 +210,26 @@ export const CreateProject: React.FC = () => {
                 <label className="block text-xs font-semibold text-slate-300 mb-1">Language</label>
                 <select
                   value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
+                  onChange={(e) => {
+                    const newLang = e.target.value;
+                    setLanguage(newLang);
+                    if (newLang === 'Bengali') {
+                      const bnVoice = voices.find((v) => v.language === 'bn-IN' || v.name.includes('Bashkar'));
+                      if (bnVoice) {
+                        setVoiceStyle(bnVoice.name);
+                      } else {
+                        setVoiceStyle('Deep Storyteller (Bashkar - বাংলা)');
+                      }
+                    }
+                  }}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:ring-2 focus:ring-brand-500"
                 >
                   <option value="English">English</option>
+                  <option value="Bengali">Bengali (বাংলা)</option>
+                  <option value="Hindi">Hindi</option>
                   <option value="Spanish">Spanish</option>
                   <option value="French">French</option>
                   <option value="German">German</option>
-                  <option value="Hindi">Hindi</option>
                   <option value="Japanese">Japanese</option>
                 </select>
               </div>

@@ -9,6 +9,22 @@ const router = Router();
 
 const DEFAULT_VOICES = [
   {
+    name: 'Deep Storyteller (Bashkar - বাংলা)',
+    voiceId: 'bn-IN-BashkarNeural',
+    language: 'bn-IN',
+    gender: 'Male',
+    sampleUrl: null,
+    isDefault: false,
+  },
+  {
+    name: 'Calm Narrator (Tanishaa - বাংলা)',
+    voiceId: 'bn-IN-TanishaaNeural',
+    language: 'bn-IN',
+    gender: 'Female',
+    sampleUrl: null,
+    isDefault: false,
+  },
+  {
     name: 'Deep Narration (Christopher)',
     voiceId: 'en-US-ChristopherNeural',
     language: 'en-US',

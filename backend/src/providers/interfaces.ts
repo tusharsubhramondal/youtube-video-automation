@@ -43,6 +43,7 @@ export interface LLMProvider {
     topic: string;
     script: ScriptResult;
     category: string;
+    language?: string;
   }): Promise<{
     titles: string[];
     description: string;
