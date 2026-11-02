@@ -55,7 +55,7 @@ export const VideoPreview: React.FC = () => {
       if (data.settings) {
         setResolution(data.settings.resolution || '1080p');
         setFps(data.settings.fps || 30);
-        setEnableSubtitles(data.settings.enableSubtitles ?? true);
+        setEnableSubtitles(data.settings.enableSubtitles ?? (data.format === 'SHORTS' ? false : true));
         setSubtitleFontSize(data.settings.subtitleFontSize || 24);
         setSubtitleColor(data.settings.subtitleColor || '#FFFFFF');
         setBgMusicVol(data.settings.backgroundMusicVolume ?? 0.15);
@@ -280,12 +280,19 @@ export const VideoPreview: React.FC = () => {
                     <Subtitles className="w-3.5 h-3.5 text-brand-400" />
                     Burn-In Subtitles
                   </label>
-                  <input
-                    type="checkbox"
-                    checked={enableSubtitles}
-                    onChange={(e) => setEnableSubtitles(e.target.checked)}
-                    className="w-4 h-4 accent-brand-500 rounded cursor-pointer"
-                  />
+                  <div className="flex items-center gap-2">
+                    {!enableSubtitles && isShorts && (
+                      <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 font-medium">
+                        Clean Visuals (Default)
+                      </span>
+                    )}
+                    <input
+                      type="checkbox"
+                      checked={enableSubtitles}
+                      onChange={(e) => setEnableSubtitles(e.target.checked)}
+                      className="w-4 h-4 accent-brand-500 rounded cursor-pointer"
+                    />
+                  </div>
                 </div>
 
                 {enableSubtitles && (

@@ -140,7 +140,7 @@ export class DailyAutomationService {
           create: {
             resolution: '1080p',
             fps: 30,
-            enableSubtitles: true,
+            enableSubtitles: false, // Default to FALSE for Shorts & Reels (clean video without onscreen caption burn-in)
             subtitleFontSize: 28, // High-visibility Reels kinetic captions
             voiceVolume: 1.0,
             backgroundMusicVolume: 0.12,

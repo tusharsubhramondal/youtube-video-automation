@@ -29,7 +29,7 @@ export const CreateProject: React.FC = () => {
   const [isPreviewingVoice, setIsPreviewingVoice] = useState(false);
   const [playingAudio, setPlayingAudio] = useState<HTMLAudioElement | null>(null);
   const [autoRunPipeline, setAutoRunPipeline] = useState(true);
-  const [enableSubtitles, setEnableSubtitles] = useState(true);
+  const [enableSubtitles, setEnableSubtitles] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -231,6 +231,7 @@ export const CreateProject: React.FC = () => {
             <div
               onClick={() => {
                 setFormat('SHORTS');
+                setEnableSubtitles(false);
                 if (targetDuration > 60) setTargetDuration(60);
               }}
               className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center gap-4 ${
@@ -378,12 +379,18 @@ export const CreateProject: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h4 className="text-sm font-semibold text-white">Burn-In Subtitles & Narration</h4>
-                <span className="text-[10px] bg-brand-500/10 text-brand-400 px-2 py-0.5 rounded font-medium border border-brand-500/20">
-                  {enableSubtitles ? 'Enabled' : 'Disabled (Clean Visuals)'}
+                <span className={`text-[10px] px-2 py-0.5 rounded font-medium border ${
+                  enableSubtitles
+                    ? 'bg-brand-500/10 text-brand-400 border-brand-500/20'
+                    : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                }`}>
+                  {enableSubtitles ? 'Enabled' : 'Disabled by Default (Clean Visuals)'}
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Overlays synchronized narration text directly on the video. Uncheck if you want clean video without text.
+                {format === 'SHORTS'
+                  ? 'Disabled by default for Shorts & Reels to maintain clean visual aesthetic. Check only if you need burned-in captions.'
+                  : 'Overlays synchronized narration text directly on the video. Uncheck if you want clean video without text.'}
               </p>
             </div>
           </div>

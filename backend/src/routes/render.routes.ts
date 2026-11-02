@@ -51,7 +51,11 @@ router.post('/start/:projectId', async (req: Request, res: Response, next: NextF
       resolution: renderRecord.resolution,
       fps: renderRecord.fps,
       aspectRatio: renderRecord.aspectRatio,
-      enableSubtitles: enableSubtitles ?? project.settings?.enableSubtitles ?? true,
+      enableSubtitles: enableSubtitles !== undefined
+        ? enableSubtitles
+        : project.settings?.enableSubtitles !== undefined
+          ? project.settings.enableSubtitles
+          : (project.format === 'SHORTS' ? false : true),
       subtitleFontSize: subtitleFontSize ?? project.settings?.subtitleFontSize ?? 24,
       subtitleColor: subtitleColor ?? project.settings?.subtitleColor ?? '#FFFFFF',
       bgMusicVolume: bgMusicVolume ?? project.settings?.backgroundMusicVolume ?? 0.15,

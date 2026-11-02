@@ -65,7 +65,11 @@ export const editingAgent = {
       }
 
       const fps = options?.fps || project.settings?.fps || 30;
-      const enableSubtitles = options?.enableSubtitles ?? project.settings?.enableSubtitles ?? true;
+      const enableSubtitles = options?.enableSubtitles !== undefined
+        ? options.enableSubtitles
+        : project.settings?.enableSubtitles !== undefined
+          ? project.settings.enableSubtitles
+          : (isShorts ? false : true);
       const subtitleFontSize = options?.subtitleFontSize || (isShorts ? 28 : 24);
       const voiceVol = options?.voiceVolume ?? project.settings?.voiceVolume ?? 1.0;
       const bgMusicVol = options?.bgMusicVolume ?? project.settings?.backgroundMusicVolume ?? 0.15;

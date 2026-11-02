@@ -126,6 +126,9 @@ router.put('/project/:projectId', async (req: Request, res: Response, next: Next
     const { projectId } = req.params;
     const { resolution, fps, enableSubtitles, backgroundMusicVolume, voiceVolume, autoPublish } = req.body;
 
+    const project = await prisma.videoProject.findUnique({ where: { id: projectId } });
+    const defaultSubtitles = project?.format === 'SHORTS' ? false : true;
+
     const settings = await prisma.projectSettings.upsert({
       where: { projectId },
       update: {
@@ -140,7 +143,7 @@ router.put('/project/:projectId', async (req: Request, res: Response, next: Next
         projectId,
         resolution: resolution || '1080p',
         fps: fps || 30,
-        enableSubtitles: enableSubtitles ?? true,
+        enableSubtitles: enableSubtitles !== undefined ? enableSubtitles : defaultSubtitles,
         backgroundMusicVolume: backgroundMusicVolume ?? 0.15,
         voiceVolume: voiceVolume ?? 1.0,
         autoPublish: autoPublish ?? false,

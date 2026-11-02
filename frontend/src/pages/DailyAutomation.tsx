@@ -213,7 +213,7 @@ export const DailyAutomation: React.FC = () => {
               Daily Facebook & Instagram Reels Factory
             </h1>
             <p className="text-sm text-slate-400 max-w-2xl leading-relaxed">
-              Discovers what is trending today, writes high-retention 3-second hooks, generates cinematic visuals via Cloudflare FLUX, burns in safe-zone kinetic captions, and publishes across Meta & YouTube daily.
+              Discovers what is trending today, writes high-retention 3-second hooks, generates cinematic visuals via Cloudflare FLUX, renders clean full-screen 9:16 video without caption burn-in, and publishes across Meta & YouTube daily.
             </p>
           </div>
 
@@ -513,6 +513,22 @@ export const DailyAutomation: React.FC = () => {
                 >
                   {autoPublish ? 'Auto-Publish Active' : '1-Click Review Mode'}
                 </button>
+              </div>
+
+              {/* Clean 9:16 Visuals / Subtitles Notice */}
+              <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800/80 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 font-mono font-bold text-[11px] border border-emerald-500/20">
+                    9:16 Clean
+                  </span>
+                  <div>
+                    <span className="text-white font-medium block text-xs">Unobstructed Clean Visuals (Default)</span>
+                    <span className="text-[11px] text-slate-400">On-screen caption burn-in disabled by default for Reels & Shorts. Subtitles exported to .SRT file.</span>
+                  </div>
+                </div>
+                <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold shrink-0">
+                  Captions Off
+                </span>
               </div>
 
               {/* Formatting & Narration Styles */}
