@@ -32,6 +32,42 @@ export class DailyAutomationService {
     return schedule;
   }
 
+  private schedulerInterval: NodeJS.Timeout | null = null;
+  private lastExecutedMinute: string | null = null;
+
+  /**
+   * Initializes recurring daily scheduler that triggers automated production
+   */
+  initScheduler() {
+    if (this.schedulerInterval) return;
+
+    logger.info('[DailyAutomationService] Initializing automated daily cron runner (checking every 60s)...');
+    this.schedulerInterval = setInterval(async () => {
+      try {
+        const schedule = await prisma.automationSchedule.findFirst();
+        if (!schedule || !schedule.isActive) return;
+
+        const now = new Date();
+        const currentUtcHour = now.getUTCHours();
+        const currentUtcMinute = now.getUTCMinutes();
+        const timeKey = `${now.getUTCFullYear()}-${now.getUTCMonth()}-${now.getUTCDate()}:${currentUtcHour}:${currentUtcMinute}`;
+
+        // Check if current time matches scheduled time and hasn't already run this minute
+        if (
+          currentUtcHour === schedule.runHourUtc &&
+          currentUtcMinute === schedule.runMinuteUtc &&
+          this.lastExecutedMinute !== timeKey
+        ) {
+          this.lastExecutedMinute = timeKey;
+          logger.info(`[DailyAutomationService] Scheduled time reached (${schedule.runHourUtc}:${schedule.runMinuteUtc} UTC). Triggering autonomous production cycle...`);
+          await this.executeDailyProduction();
+        }
+      } catch (err: any) {
+        logger.error(`[DailyAutomationService] Scheduler tick error: ${err.message}`);
+      }
+    }, 60000);
+  }
+
   /**
    * Updates schedule settings
    */
@@ -46,6 +82,7 @@ export class DailyAutomationService {
     isActive?: boolean;
     runHourUtc?: number;
     runMinuteUtc?: number;
+    cronExpression?: string;
   }) {
     const current = await this.getSchedule();
     const updated = await prisma.automationSchedule.update({
@@ -59,8 +96,9 @@ export class DailyAutomationService {
         targetDuration: data.targetDuration ?? current.targetDuration,
         autoPublish: data.autoPublish ?? current.autoPublish,
         isActive: data.isActive ?? current.isActive,
-        runHourUtc: data.runHourUtc ?? current.runHourUtc,
-        runMinuteUtc: data.runMinuteUtc ?? current.runMinuteUtc,
+        runHourUtc: data.runHourUtc !== undefined ? data.runHourUtc : current.runHourUtc,
+        runMinuteUtc: data.runMinuteUtc !== undefined ? data.runMinuteUtc : current.runMinuteUtc,
+        cronExpression: data.cronExpression ?? current.cronExpression,
       },
     });
     return updated;

@@ -24,7 +24,19 @@ router.get('/schedule', async (req: Request, res: Response, next: NextFunction) 
 // PUT /api/automation/schedule - Update automation schedule configuration
 router.put('/schedule', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { niche, language, visualStyle, voiceStyle, targetPlatforms, targetDuration, autoPublish, isActive } = req.body;
+    const {
+      niche,
+      language,
+      visualStyle,
+      voiceStyle,
+      targetPlatforms,
+      targetDuration,
+      autoPublish,
+      isActive,
+      runHourUtc,
+      runMinuteUtc,
+      cronExpression,
+    } = req.body;
 
     const updated = await dailyAutomationService.updateSchedule({
       niche,
@@ -35,6 +47,9 @@ router.put('/schedule', async (req: Request, res: Response, next: NextFunction) 
       targetDuration,
       autoPublish,
       isActive,
+      runHourUtc: runHourUtc !== undefined ? Number(runHourUtc) : undefined,
+      runMinuteUtc: runMinuteUtc !== undefined ? Number(runMinuteUtc) : undefined,
+      cronExpression,
     });
 
     res.json({

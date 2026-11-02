@@ -25,6 +25,45 @@ import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 
+const getLocalTimeFromUtc = (utcHour: number, utcMinute: number): string => {
+  const d = new Date();
+  d.setUTCHours(utcHour, utcMinute, 0, 0);
+  const localH = String(d.getHours()).padStart(2, '0');
+  const localM = String(d.getMinutes()).padStart(2, '0');
+  return `${localH}:${localM}`;
+};
+
+const getUtcFromLocalTime = (timeStr: string): { runHourUtc: number; runMinuteUtc: number } => {
+  const parts = timeStr.split(':');
+  const h = parseInt(parts[0] || '9', 10);
+  const m = parseInt(parts[1] || '0', 10);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return {
+    runHourUtc: d.getUTCHours(),
+    runMinuteUtc: d.getUTCMinutes(),
+  };
+};
+
+const calculateNextRun = (utcHour: number, utcMinute: number, isActive: boolean): string => {
+  if (!isActive) return 'Autopilot paused';
+  const now = new Date();
+  const next = new Date();
+  next.setUTCHours(utcHour, utcMinute, 0, 0);
+  if (next.getTime() <= now.getTime()) {
+    next.setUTCDate(next.getUTCDate() + 1);
+  }
+  const diffMs = next.getTime() - now.getTime();
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+  const localTimeStr = next.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const isToday = next.getDate() === now.getDate();
+  const dayStr = isToday ? 'Today' : 'Tomorrow';
+
+  return `${dayStr} at ${localTimeStr} (in ${diffHours}h ${diffMinutes}m)`;
+};
+
 export const DailyAutomation: React.FC = () => {
   const navigate = useNavigate();
   const [schedule, setSchedule] = useState<any>(null);
@@ -44,6 +83,12 @@ export const DailyAutomation: React.FC = () => {
   const [visualStyle, setVisualStyle] = useState('Cinematic');
   const [voiceStyle, setVoiceStyle] = useState('Deep Narration (Christopher)');
 
+  // Schedule Customization State
+  const [runTimeLocal, setRunTimeLocal] = useState('09:00');
+  const [cronExpression, setCronExpression] = useState('0 9 * * *');
+  const [runFrequency, setRunFrequency] = useState<'DAILY' | 'TWICE_DAILY' | 'WEEKDAYS' | 'CUSTOM'>('DAILY');
+  const [userTimezone, setUserTimezone] = useState('');
+
   useEffect(() => {
     loadData();
   }, []);
@@ -60,6 +105,15 @@ export const DailyAutomation: React.FC = () => {
       setTargetDuration(data.targetDuration || 45);
       setVisualStyle(data.visualStyle || 'Cinematic');
       setVoiceStyle(data.voiceStyle || 'Deep Narration (Christopher)');
+
+      const localTime = getLocalTimeFromUtc(data.runHourUtc ?? 3, data.runMinuteUtc ?? 30);
+      setRunTimeLocal(localTime);
+      setCronExpression(data.cronExpression || '0 9 * * *');
+      try {
+        setUserTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone || 'Local');
+      } catch {
+        setUserTimezone('Local');
+      }
 
       loadTrends(data.niche || 'Tech & AI Facts');
     } catch (err) {
@@ -84,6 +138,7 @@ export const DailyAutomation: React.FC = () => {
   const handleSaveSettings = async () => {
     setIsSaving(true);
     try {
+      const { runHourUtc, runMinuteUtc } = getUtcFromLocalTime(runTimeLocal);
       const updated = await automationService.updateSchedule({
         niche,
         targetPlatforms,
@@ -92,9 +147,12 @@ export const DailyAutomation: React.FC = () => {
         targetDuration,
         visualStyle,
         voiceStyle,
+        runHourUtc,
+        runMinuteUtc,
+        cronExpression,
       });
       setSchedule(updated);
-      alert('Daily Reels Automation settings saved successfully!');
+      alert('Daily Reels Automation & Schedule settings saved successfully!');
     } catch (err: any) {
       alert(`Failed to save settings: ${err.message}`);
     } finally {
@@ -169,36 +227,45 @@ export const DailyAutomation: React.FC = () => {
             >
               {isTriggering ? 'Producing Reel...' : "Run Today's Reel Now"}
             </Button>
-            {schedule?.lastRunAt && (
-              <div className="flex items-center justify-center gap-1.5 text-[11px] font-mono">
-                <span className="text-slate-400">
-                  Last: {new Date(schedule.lastRunAt).toLocaleDateString()}
+            <div className="flex flex-col items-center sm:items-end gap-1.5 text-[11px] font-mono">
+              {schedule?.lastRunAt && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-400">
+                    Last: {new Date(schedule.lastRunAt).toLocaleDateString()}
+                  </span>
+                  {schedule.lastRunStatus === 'SUCCESS' && (
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-semibold border border-emerald-500/20">
+                      SUCCESS
+                    </span>
+                  )}
+                  {schedule.lastRunStatus === 'READY' && (
+                    <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 font-semibold border border-blue-500/20">
+                      READY
+                    </span>
+                  )}
+                  {schedule.lastRunStatus === 'RUNNING' && (
+                    <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 font-semibold border border-amber-500/20 animate-pulse">
+                      RUNNING...
+                    </span>
+                  )}
+                  {schedule.lastRunStatus?.startsWith('FAILED') && (
+                    <span
+                      title={schedule.lastRunStatus}
+                      className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 font-semibold border border-rose-500/20 cursor-help"
+                    >
+                      FAILED (Hover details)
+                    </span>
+                  )}
+                </div>
+              )}
+              <div className="flex items-center gap-1.5 text-slate-300">
+                <Clock className="w-3.5 h-3.5 text-brand-400" />
+                <span className="text-slate-400">Next Run:</span>
+                <span className="text-brand-300 font-semibold">
+                  {calculateNextRun(schedule?.runHourUtc ?? 3, schedule?.runMinuteUtc ?? 30, isActive)}
                 </span>
-                {schedule.lastRunStatus === 'SUCCESS' && (
-                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-semibold border border-emerald-500/20">
-                    SUCCESS
-                  </span>
-                )}
-                {schedule.lastRunStatus === 'READY' && (
-                  <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 font-semibold border border-blue-500/20">
-                    READY
-                  </span>
-                )}
-                {schedule.lastRunStatus === 'RUNNING' && (
-                  <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 font-semibold border border-amber-500/20 animate-pulse">
-                    RUNNING...
-                  </span>
-                )}
-                {schedule.lastRunStatus?.startsWith('FAILED') && (
-                  <span
-                    title={schedule.lastRunStatus}
-                    className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 font-semibold border border-rose-500/20 cursor-help"
-                  >
-                    FAILED (Hover details)
-                  </span>
-                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
 
@@ -232,6 +299,114 @@ export const DailyAutomation: React.FC = () => {
             </div>
 
             <div className="space-y-5 text-xs">
+              {/* Schedule & Timing Controls */}
+              <div className="p-4 bg-slate-950/80 rounded-xl border border-brand-500/30 space-y-4 shadow-inner">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 rounded-lg bg-brand-500/10 text-brand-400 border border-brand-500/20">
+                      <Clock className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-white text-xs">Autonomous Schedule & Frequency Customization</h4>
+                      <p className="text-[11px] text-slate-400">Configure daily automated trigger time, frequency, and cloud timezones</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                    <span className="text-[11px] text-slate-400">Next Run:</span>
+                    <span className="px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-300 font-mono text-[11px] font-semibold border border-brand-500/30">
+                      {calculateNextRun(
+                        getUtcFromLocalTime(runTimeLocal).runHourUtc,
+                        getUtcFromLocalTime(runTimeLocal).runMinuteUtc,
+                        isActive
+                      )}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Frequency Cadence Selector */}
+                <div>
+                  <label className="text-slate-300 block font-medium mb-1.5 text-xs">Execution Cadence</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { id: 'DAILY', label: 'Daily (1x / Day)', desc: 'Once every 24 hours' },
+                      { id: 'TWICE_DAILY', label: 'Twice Daily (2x / Day)', desc: 'Peak engagement hours' },
+                      { id: 'WEEKDAYS', label: 'Weekdays Only', desc: 'Mon - Fri autopilot' },
+                      { id: 'CUSTOM', label: 'Custom Cron', desc: 'Custom cron expression' },
+                    ].map((freq) => (
+                      <button
+                        key={freq.id}
+                        type="button"
+                        onClick={() => setRunFrequency(freq.id as any)}
+                        className={`p-2.5 rounded-lg border text-left transition-all ${
+                          runFrequency === freq.id
+                            ? 'bg-brand-600/20 border-brand-500 text-brand-300 font-medium ring-1 ring-brand-500/30'
+                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
+                        }`}
+                      >
+                        <span className="text-xs font-semibold block">{freq.label}</span>
+                        <span className="text-[10px] text-slate-500 block">{freq.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Time Picker & Timezone Conversion */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                  <div>
+                    <label className="text-slate-300 block font-medium mb-1 text-xs">
+                      Daily Trigger Time (Your Local Time)
+                    </label>
+                    <input
+                      type="time"
+                      value={runTimeLocal}
+                      onChange={(e) => setRunTimeLocal(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700/80 rounded-lg p-2.5 text-xs text-white font-mono focus:ring-1 focus:ring-brand-500"
+                    />
+                    <span className="text-[10px] text-slate-500 mt-1 block">
+                      Local Timezone: <span className="text-slate-300 font-mono">{userTimezone || 'Local'}</span>
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block font-medium mb-1 text-xs">
+                      Cloud UTC Synchronization
+                    </label>
+                    <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs font-mono text-slate-300 flex items-center justify-between">
+                      <span>
+                        {String(getUtcFromLocalTime(runTimeLocal).runHourUtc).padStart(2, '0')}:
+                        {String(getUtcFromLocalTime(runTimeLocal).runMinuteUtc).padStart(2, '0')} UTC
+                      </span>
+                      <span className="text-[10px] text-emerald-400 font-sans font-medium px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
+                        Auto-Synchronized
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 mt-1 block">
+                      Saved to backend database for UTC cron triggers
+                    </span>
+                  </div>
+                </div>
+
+                {/* Custom Cron Input (if custom selected) */}
+                {runFrequency === 'CUSTOM' && (
+                  <div className="pt-2 border-t border-slate-800">
+                    <label className="text-slate-300 block font-medium mb-1 text-xs">
+                      Standard 5-Field Cron Expression
+                    </label>
+                    <input
+                      type="text"
+                      value={cronExpression}
+                      onChange={(e) => setCronExpression(e.target.value)}
+                      placeholder="0 9 * * *"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white font-mono"
+                    />
+                    <span className="text-[10px] text-slate-500 mt-1 block">
+                      Format: <code className="text-brand-300 font-mono">minute hour day month day-of-week</code> (e.g., <code className="text-brand-300 font-mono">30 3 * * *</code> for 9:00 AM IST)
+                    </span>
+                  </div>
+                )}
+              </div>
+
               {/* Niche Selection */}
               <div>
                 <label className="text-slate-300 block font-medium mb-1.5">Target Content Niche / Channel Theme</label>

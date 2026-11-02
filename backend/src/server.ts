@@ -77,6 +77,9 @@ export async function startServer() {
     return await dailyAutomationService.executeDailyProduction(data);
   });
 
+  // Start internal automated cron scheduler loop
+  dailyAutomationService.initScheduler();
+
   const server = app.listen(config.port, () => {
     logger.info(`Backend server running on http://localhost:${config.port}`);
     logger.info(`Serving uploads from ${config.storage.uploadDir}`);
