@@ -18,6 +18,35 @@ import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 
+const YOUTUBE_CATEGORIES = [
+  { id: '28', name: 'Science & Technology' },
+  { id: '24', name: 'Entertainment' },
+  { id: '27', name: 'Education' },
+  { id: '23', name: 'Comedy' },
+  { id: '20', name: 'Gaming' },
+  { id: '22', name: 'People & Blogs' },
+  { id: '26', name: 'Howto & Style' },
+  { id: '10', name: 'Music' },
+  { id: '17', name: 'Sports' },
+  { id: '1', name: 'Film & Animation' },
+  { id: '25', name: 'News & Politics' },
+];
+
+const mapCategoryToId = (category?: string): string => {
+  if (!category) return '28';
+  const c = category.toLowerCase();
+  if (c.includes('science') || c.includes('tech') || c.includes('ai')) return '28';
+  if (c.includes('comedy') || c.includes('humor')) return '23';
+  if (c.includes('educat')) return '27';
+  if (c.includes('game') || c.includes('gaming')) return '20';
+  if (c.includes('music') || c.includes('dance')) return '10';
+  if (c.includes('sport') || c.includes('fitness')) return '17';
+  if (c.includes('film') || c.includes('movie')) return '1';
+  if (c.includes('news') || c.includes('politic')) return '25';
+  if (c.includes('style') || c.includes('howto')) return '26';
+  return '24';
+};
+
 export const YouTubeIntegration: React.FC = () => {
   const [accounts, setAccounts] = useState<YouTubeAccount[]>([]);
   const [isConfigured, setIsConfigured] = useState(false);
@@ -25,6 +54,7 @@ export const YouTubeIntegration: React.FC = () => {
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [selectedProject, setSelectedProject] = useState<VideoProject | null>(null);
   const [privacyStatus, setPrivacyStatus] = useState<'PRIVATE' | 'UNLISTED' | 'PUBLIC'>('PRIVATE');
+  const [categoryId, setCategoryId] = useState<string>('28');
   const [userConfirmed, setUserConfirmed] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishedSuccess, setPublishedSuccess] = useState<any>(null);
@@ -49,10 +79,14 @@ export const YouTubeIntegration: React.FC = () => {
       if (activeId && projList.some((p: VideoProject) => p.id === activeId)) {
         setSelectedProjectId(activeId);
         const p = projList.find((x: VideoProject) => x.id === activeId);
-        if (p) setSelectedProject(p);
+        if (p) {
+          setSelectedProject(p);
+          setCategoryId(mapCategoryToId(p.category));
+        }
       } else if (projList.length > 0) {
         setSelectedProjectId(projList[0].id);
         setSelectedProject(projList[0]);
+        setCategoryId(mapCategoryToId(projList[0].category));
       }
     } catch (err) {
       console.error('Failed to load YouTube accounts:', err);
@@ -93,6 +127,9 @@ export const YouTubeIntegration: React.FC = () => {
     setSelectedProjectId(pId);
     const p = projects.find((x) => x.id === pId) || null;
     setSelectedProject(p);
+    if (p) {
+      setCategoryId(mapCategoryToId(p.category));
+    }
   };
 
   const handlePublish = async () => {
@@ -113,6 +150,7 @@ export const YouTubeIntegration: React.FC = () => {
         title: selectedProject.seoTitle || selectedProject.title,
         description: selectedProject.seoDescription || selectedProject.topic,
         tags: selectedProject.seoTags || undefined,
+        categoryId,
         privacyStatus,
         userApproved: true,
       });
@@ -263,9 +301,22 @@ export const YouTubeIntegration: React.FC = () => {
 
               {selectedProject && (
                 <div className="p-3 bg-slate-950 rounded-lg border border-slate-800 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">Target Feed:</span>
+                    <span className={`px-2 py-0.5 rounded text-[11px] font-bold border ${
+                      selectedProject.format === 'SHORTS'
+                        ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                        : 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30'
+                    }`}>
+                      {selectedProject.format === 'SHORTS' ? '📱 YouTube Shorts Shelf (Vertical 9:16)' : '🖥️ Standard Videos Tab (16:9)'}
+                    </span>
+                  </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Publish Title:</span>
-                    <span className="text-white font-medium line-clamp-1">{selectedProject.seoTitle || selectedProject.title}</span>
+                    <span className="text-white font-medium line-clamp-1">
+                      {selectedProject.seoTitle || selectedProject.title}
+                      {selectedProject.format === 'SHORTS' && ' #Shorts'}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Render Status:</span>
@@ -273,8 +324,32 @@ export const YouTubeIntegration: React.FC = () => {
                       {selectedProject.finalVideoUrl ? 'Ready for Upload' : 'Render Required'}
                     </span>
                   </div>
+                  <p className="text-[10px] text-slate-500 pt-1 border-t border-slate-800/80">
+                    {selectedProject.format === 'SHORTS'
+                      ? '✓ Meets Shorts criteria (≤60s, 9:16 aspect ratio). YouTube will automatically place this in your channel\'s Shorts tab and the mobile Shorts algorithm.'
+                      : '✓ Published to your channel\'s standard landscape Videos tab with custom thumbnail.'}
+                  </p>
                 </div>
               )}
+
+              {/* YouTube Category Selector */}
+              <div>
+                <label className="text-slate-300 block font-medium mb-1.5">YouTube Content Category (Genre)</label>
+                <select
+                  value={categoryId}
+                  onChange={(e) => setCategoryId(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white focus:ring-1 focus:ring-brand-500 font-medium"
+                >
+                  {YOUTUBE_CATEGORIES.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-[10px] text-slate-500 mt-1 block">
+                  Determines recommendation cluster, topic channels, and search filters on YouTube.
+                </span>
+              </div>
 
               {/* Privacy Selector */}
               <div>

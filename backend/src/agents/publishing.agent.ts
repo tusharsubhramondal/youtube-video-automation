@@ -112,10 +112,25 @@ export const publishingAgent = {
         }
       }
 
+      // Ensure YouTube Shorts indexing tag is present for vertical videos
+      let uploadTitle = params.title;
+      let uploadDescription = params.description;
+      if (project.format === 'SHORTS') {
+        if (!uploadTitle.toLowerCase().includes('#shorts')) {
+          uploadTitle = `${uploadTitle} #Shorts`;
+        }
+        if (!uploadDescription.toLowerCase().includes('#shorts')) {
+          uploadDescription = `${uploadDescription}\n\n#Shorts #YouTubeShorts`;
+        }
+        if (!tagList.some((t) => t.toLowerCase() === 'shorts')) {
+          tagList.push('Shorts', 'YouTube Shorts');
+        }
+      }
+
       const uploadResult = await provider.uploadVideo({
         videoFilePath: project.finalVideoPath,
-        title: params.title,
-        description: params.description,
+        title: uploadTitle,
+        description: uploadDescription,
         tags: tagList,
         categoryId: params.categoryId || '22',
         privacyStatus: params.privacyStatus.toLowerCase() as any,
