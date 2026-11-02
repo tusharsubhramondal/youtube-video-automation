@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Play,
+  Pause,
   RotateCcw,
   Sparkles,
   Layers,
@@ -15,6 +16,8 @@ import {
   ExternalLink,
   CheckCircle2,
   Loader2,
+  Download,
+  Volume2,
 } from 'lucide-react';
 import { projectService, agentService, metaService } from '../services/api';
 import { VideoProject } from '../types';
@@ -31,13 +34,65 @@ export const ProjectDetail: React.FC = () => {
   const [isRunningPipeline, setIsRunningPipeline] = useState(false);
   const [publishedReels, setPublishedReels] = useState<any[]>([]);
   const [isPublishingReel, setIsPublishingReel] = useState<string | null>(null);
+  const [playingAudioUrl, setPlayingAudioUrl] = useState<string | null>(null);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+
+  const togglePlayAudio = (url: string) => {
+    if (playingAudioUrl === url && audioElement) {
+      audioElement.pause();
+      setPlayingAudioUrl(null);
+      setAudioElement(null);
+      return;
+    }
+    if (audioElement) {
+      audioElement.pause();
+    }
+    const fullUrl = url.startsWith('http') ? url : `http://localhost:5000${url}`;
+    const audio = new Audio(fullUrl);
+    audio.play();
+    audio.onended = () => {
+      setPlayingAudioUrl(null);
+      setAudioElement(null);
+    };
+    setAudioElement(audio);
+    setPlayingAudioUrl(url);
+  };
+
+  const loadProject = async (projectId: string, silent = false) => {
+    try {
+      if (!silent) setIsLoading(true);
+      const data = await projectService.getProjectById(projectId);
+      setProject(data);
+    } catch (err) {
+      console.error('Failed to load project details:', err);
+    } finally {
+      if (!silent) setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (id) {
-      localStorage.setItem('activeProjectId', id);
-      loadProject(id);
-      loadReels(id);
-    }
+    if (!id) return;
+    localStorage.setItem('activeProjectId', id);
+    loadProject(id);
+    loadReels(id);
+
+    // Real-time live status polling every 2.5s while project is processing
+    const interval = setInterval(async () => {
+      try {
+        const data = await projectService.getProjectById(id);
+        setProject((prev) => {
+          // If status completed or failed, stop polling
+          if (data.status === 'PUBLISHED' || data.status === 'READY_TO_PUBLISH' || data.status === 'FAILED') {
+            clearInterval(interval);
+          }
+          return data;
+        });
+      } catch (e) {
+        // silent polling error catch
+      }
+    }, 2500);
+
+    return () => clearInterval(interval);
   }, [id]);
 
   const loadReels = async (projectId: string) => {
@@ -67,18 +122,6 @@ export const ProjectDetail: React.FC = () => {
       alert(`Publishing failed: ${err.response?.data?.error || err.message}`);
     } finally {
       setIsPublishingReel(null);
-    }
-  };
-
-  const loadProject = async (projectId: string) => {
-    try {
-      setIsLoading(true);
-      const data = await projectService.getProjectById(projectId);
-      setProject(data);
-    } catch (err) {
-      console.error('Failed to load project details:', err);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -229,6 +272,189 @@ export const ProjectDetail: React.FC = () => {
           <p className="text-[10px] text-slate-400">OAuth Upload</p>
         </Card>
       </div>
+
+      {/* Production Showcase (Final Video & Thumbnail) */}
+      {(project.finalVideoUrl || project.thumbnailUrl) && (
+        <Card className="p-6 border-brand-500/30 bg-gradient-to-r from-slate-900 via-brand-950/20 to-slate-900 shadow-xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <Film className="w-4 h-4" />
+                </span>
+                <h3 className="font-bold text-white text-base">Production Assets (Final Video & High-CTR Thumbnail)</h3>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Your video is rendered with verified {project.format === 'SHORTS' ? '9:16 vertical Short/Reel' : '16:9 landscape'} aspect ratio.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {project.finalVideoUrl && (
+                <a
+                  href={`http://localhost:5000${project.finalVideoUrl}`}
+                  download
+                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5 text-brand-400" />
+                  Download MP4
+                </a>
+              )}
+              <Button
+                size="sm"
+                variant="primary"
+                icon={<Share2 className="w-3.5 h-3.5" />}
+                onClick={() => navigate('/youtube')}
+              >
+                Publish to YouTube
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+            {/* Video Player */}
+            {project.finalVideoUrl ? (
+              <div className="space-y-2">
+                <span className="text-xs font-semibold text-slate-300 block">Rendered MP4 Preview:</span>
+                <div className={`relative bg-black rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center ${project.format === 'SHORTS' ? 'max-w-[280px] mx-auto aspect-[9/16]' : 'w-full aspect-video'}`}>
+                  <video
+                    src={`http://localhost:5000${project.finalVideoUrl}`}
+                    controls
+                    preload="metadata"
+                    className="w-full h-full object-contain rounded-xl"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="p-8 border border-dashed border-slate-800 rounded-xl text-center text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
+                <Film className="w-8 h-8 text-slate-600 animate-pulse" />
+                <span>Video render pending... Run pipeline to compile video.</span>
+              </div>
+            )}
+
+            {/* Thumbnail Showcase */}
+            {project.thumbnailUrl ? (
+              <div className="space-y-2">
+                <span className="text-xs font-semibold text-slate-300 block">Generated YouTube Thumbnail:</span>
+                <div className="relative rounded-xl overflow-hidden border border-slate-800 aspect-video group">
+                  <img
+                    src={`http://localhost:5000${project.thumbnailUrl}`}
+                    alt="Project Thumbnail"
+                    className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-3">
+                    <span className="text-[11px] font-medium text-white line-clamp-1">{project.seoTitle || project.title}</span>
+                  </div>
+                </div>
+                {project.thumbnailPrompt && (
+                  <p className="text-[11px] text-slate-400 italic line-clamp-2 bg-slate-950 p-2 rounded border border-slate-800">
+                    "{project.thumbnailPrompt}"
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="p-8 border border-dashed border-slate-800 rounded-xl text-center text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
+                <ImageIcon className="w-8 h-8 text-slate-600 animate-pulse" />
+                <span>Thumbnail pending generation.</span>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* Generated Scenes & Visuals Gallery */}
+      {project.scenes && project.scenes.length > 0 && (
+        <Card className="p-6 space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                  <Layers className="w-4 h-4" />
+                </span>
+                <h3 className="font-bold text-white text-base">
+                  Generated Scenes, Visuals & Voiceover ({project.scenes.length} Scenes)
+                </h3>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Visual prompt generation, neural image synthesis, and scene narration audio.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              icon={<RotateCcw className="w-3 h-3" />}
+              onClick={() => navigate(`/project/${project.id}/scenes`)}
+            >
+              Open Scene Editor
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pt-1">
+            {project.scenes.map((scene) => (
+              <div
+                key={scene.id}
+                className="bg-slate-950 rounded-xl border border-slate-800 overflow-hidden flex flex-col justify-between hover:border-slate-700 transition-all shadow-md group"
+              >
+                {/* Scene Visual Preview */}
+                <div className="relative aspect-[16/10] bg-slate-900 overflow-hidden">
+                  {scene.imageUrl ? (
+                    <img
+                      src={`http://localhost:5000${scene.imageUrl}`}
+                      alt={`Scene ${scene.sceneNumber}`}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-600 text-xs gap-1">
+                      <ImageIcon className="w-6 h-6" />
+                      <span>Generating visual...</span>
+                    </div>
+                  )}
+
+                  <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                    <span className="px-2 py-0.5 rounded-md bg-black/75 backdrop-blur-md text-white text-[11px] font-bold border border-white/10">
+                      Scene {scene.sceneNumber}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded-md bg-black/75 backdrop-blur-md text-slate-300 text-[10px] font-mono border border-white/10">
+                      {scene.duration.toFixed(1)}s
+                    </span>
+                  </div>
+
+                  {scene.audioUrl && (
+                    <button
+                      type="button"
+                      onClick={() => togglePlayAudio(scene.audioUrl!)}
+                      className="absolute bottom-2 right-2 p-2 rounded-full bg-brand-600/90 hover:bg-brand-500 text-white shadow-lg transition-transform hover:scale-110 flex items-center justify-center"
+                      title="Audition scene narration"
+                    >
+                      {playingAudioUrl === scene.audioUrl ? (
+                        <Pause className="w-3.5 h-3.5 fill-current" />
+                      ) : (
+                        <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                      )}
+                    </button>
+                  )}
+                </div>
+
+                {/* Narration & Prompts */}
+                <div className="p-3.5 space-y-2.5 flex-1 flex flex-col justify-between">
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Spoken Voiceover:</span>
+                    <p className="text-xs text-slate-200 line-clamp-3 leading-relaxed bg-slate-900/60 p-2 rounded-lg border border-slate-800/80">
+                      "{scene.narrationText}"
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Visual Prompt (AI):</span>
+                    <p className="text-[11px] text-slate-400 italic line-clamp-2">
+                      {scene.visualPrompt}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Project Overview Details */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

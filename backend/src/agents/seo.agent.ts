@@ -27,6 +27,11 @@ export const seoAgent = {
 
       if (!project) throw new Error('Project not found');
 
+      await prisma.videoProject.update({
+        where: { id: projectId },
+        data: { currentStage: 'seo' },
+      });
+
       const llm = await getLLMProvider('SEO');
       const seoData = await llm.generateSeoMetadata({
         topic: project.topic,

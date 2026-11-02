@@ -31,6 +31,11 @@ export const videoAgent = {
 
       if (!project) throw new Error('Project not found');
 
+      await prisma.videoProject.update({
+        where: { id: projectId },
+        data: { currentStage: 'video' },
+      });
+
       const scenesToProcess = sceneId
         ? project.scenes.filter((s) => s.id === sceneId)
         : project.scenes;

@@ -30,6 +30,11 @@ export const thumbnailAgent = {
 
       if (!project) throw new Error('Project not found');
 
+      await prisma.videoProject.update({
+        where: { id: projectId },
+        data: { status: 'THUMBNAIL_SEO', currentStage: 'thumbnail' },
+      });
+
       const llm = await getLLMProvider('THUMBNAIL');
       const imageProvider = getImageProvider('THUMBNAIL');
 

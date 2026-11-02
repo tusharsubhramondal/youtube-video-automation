@@ -38,16 +38,69 @@ export const WorkflowProgress: React.FC<WorkflowProgressProps> = ({
   ];
 
   const getStageStatus = (stageId: string) => {
-    // Determine completed / active / pending based on project status and progress
-    const stageOrder = ['research', 'script', 'image', 'video', 'voice', 'editing', 'thumbnail', 'seo', 'publishing'];
-    const currentIndex = stageOrder.indexOf(project.currentStage || 'research');
-    const thisIndex = stageOrder.indexOf(stageId);
+    const hasScenes = !!(project.scenes && project.scenes.length > 0);
+    const hasImages = hasScenes && project.scenes!.some((s) => !!s.imageUrl);
+    const hasVideos = hasScenes && project.scenes!.some((s) => !!s.videoUrl);
+    const hasAudio = hasScenes && project.scenes!.some((s) => !!s.audioUrl);
+    const hasFinalVideo = !!project.finalVideoUrl;
+    const hasThumbnail = !!project.thumbnailUrl;
+    const hasSeo = !!project.seoTitle;
+    const isPublished = project.status === 'PUBLISHED' || !!(project.publishedVideos && project.publishedVideos.length > 0);
 
-    if (project.status === 'PUBLISHED') return 'completed';
-    if (project.status === 'FAILED') return thisIndex === currentIndex ? 'failed' : thisIndex < currentIndex ? 'completed' : 'pending';
-    if (thisIndex < currentIndex) return 'completed';
-    if (thisIndex === currentIndex) return 'active';
-    return 'pending';
+    const normStage = (project.currentStage || '').toLowerCase();
+    const isFailed = project.status === 'FAILED';
+
+    switch (stageId) {
+      case 'research':
+        if (project.researchNotes || hasScenes || hasFinalVideo || isPublished) return 'completed';
+        if (normStage === 'research' || project.status === 'RESEARCHING') return isFailed ? 'failed' : 'active';
+        return 'pending';
+
+      case 'script':
+        if (hasScenes || hasFinalVideo || isPublished) return 'completed';
+        if (normStage === 'script' || project.status === 'SCRIPTING') return isFailed ? 'failed' : 'active';
+        return 'pending';
+
+      case 'image':
+        if (hasImages || hasFinalVideo || isPublished) return 'completed';
+        if (normStage === 'image' || project.status === 'MEDIA_GENERATION') return isFailed ? 'failed' : 'active';
+        return hasScenes ? 'pending' : 'pending';
+
+      case 'video':
+        if (hasVideos || hasFinalVideo || isPublished) return 'completed';
+        if (normStage === 'video' || project.status === 'MEDIA_GENERATION') return isFailed ? 'failed' : 'active';
+        return hasImages ? 'pending' : 'pending';
+
+      case 'voice':
+        if (hasAudio || hasFinalVideo || isPublished) return 'completed';
+        if (normStage === 'voice' || project.status === 'MEDIA_GENERATION') return isFailed ? 'failed' : 'active';
+        return hasScenes ? 'pending' : 'pending';
+
+      case 'editing':
+        if (hasFinalVideo || isPublished) return 'completed';
+        if (normStage === 'editing' || project.status === 'EDITING') return isFailed ? 'failed' : 'active';
+        return hasAudio && hasImages ? 'pending' : 'pending';
+
+      case 'thumbnail':
+        if (hasThumbnail || isPublished) return 'completed';
+        if (normStage === 'thumbnail' || project.status === 'THUMBNAIL_SEO') return isFailed ? 'failed' : 'active';
+        return hasFinalVideo ? 'pending' : 'pending';
+
+      case 'seo':
+        if (hasSeo || isPublished) return 'completed';
+        if (normStage === 'seo') return isFailed ? 'failed' : 'active';
+        return hasThumbnail ? 'pending' : 'pending';
+
+      case 'publishing':
+        if (isPublished) return 'completed';
+        if (normStage === 'publishing' || normStage === 'ready_to_publish' || project.status === 'READY_TO_PUBLISH') {
+          return 'active';
+        }
+        return 'pending';
+
+      default:
+        return 'pending';
+    }
   };
 
   return (
