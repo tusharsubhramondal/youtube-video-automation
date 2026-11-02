@@ -3,17 +3,47 @@ import fs from 'fs';
 import { YouTubeProvider, YouTubeUploadParams } from '../interfaces.js';
 import { config } from '../../config/index.js';
 import { logger } from '../../utils/logger.js';
+import { prisma } from '../../services/prisma.service.js';
 
 export class GoogleYouTubeProvider implements YouTubeProvider {
   name = 'Google YouTube Data API v3';
   private oauth2Client: any;
 
-  constructor() {
+  constructor(tokens?: { access_token?: string; refresh_token?: string | null }) {
     this.oauth2Client = new google.auth.OAuth2(
       config.youtube.clientId,
       config.youtube.clientSecret,
       config.youtube.redirectUri
     );
+
+    if (tokens) {
+      this.setCredentials(tokens);
+    }
+
+    // Auto-update tokens in database when refreshed by Google
+    this.oauth2Client.on('tokens', async (newTokens: any) => {
+      logger.info('[GoogleYouTubeProvider] OAuth access token refreshed automatically by Google.');
+      try {
+        if (newTokens.access_token) {
+          await prisma.youTubeAccount.updateMany({
+            where: { isConnected: true },
+            data: {
+              accessToken: newTokens.access_token,
+              ...(newTokens.refresh_token ? { refreshToken: newTokens.refresh_token } : {}),
+            },
+          });
+        }
+      } catch (err: any) {
+        logger.error(`[GoogleYouTubeProvider] Failed to update refreshed tokens: ${err.message}`);
+      }
+    });
+  }
+
+  setCredentials(tokens: { access_token?: string; refresh_token?: string | null }) {
+    this.oauth2Client.setCredentials({
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+    });
   }
 
   getAuthUrl(): string {
@@ -57,6 +87,10 @@ export class GoogleYouTubeProvider implements YouTubeProvider {
   }> {
     if (!fs.existsSync(params.videoFilePath)) {
       throw new Error(`Video file does not exist at: ${params.videoFilePath}`);
+    }
+
+    if (params.tokens) {
+      this.setCredentials(params.tokens);
     }
 
     const youtube = google.youtube({ version: 'v3', auth: this.oauth2Client });

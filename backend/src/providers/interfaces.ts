@@ -119,12 +119,17 @@ export interface YouTubeUploadParams {
   categoryId: string;
   privacyStatus: 'private' | 'unlisted' | 'public';
   thumbnailPath?: string;
+  tokens?: {
+    access_token?: string;
+    refresh_token?: string | null;
+  };
 }
 
 export interface YouTubeProvider {
   name: string;
   getAuthUrl(): string;
   handleOAuthCallback(code: string): Promise<any>;
+  setCredentials?(tokens: { access_token?: string; refresh_token?: string | null }): void;
   uploadVideo(params: YouTubeUploadParams): Promise<{
     videoId: string;
     url: string;

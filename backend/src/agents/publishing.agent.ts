@@ -22,7 +22,7 @@ export const publishingAgent = {
       where: { channelId: accountData.channelId },
       update: {
         accessToken: accountData.tokens.access_token || '',
-        refreshToken: accountData.tokens.refresh_token || null,
+        ...(accountData.tokens.refresh_token ? { refreshToken: accountData.tokens.refresh_token } : {}),
         isConnected: true,
       },
       create: {
@@ -87,7 +87,10 @@ export const publishingAgent = {
         throw new Error('No connected YouTube account found. Please connect your YouTube channel first.');
       }
 
-      const provider = getYouTubeProvider();
+      const provider = getYouTubeProvider({
+        access_token: account.accessToken,
+        refresh_token: account.refreshToken,
+      });
 
       // Parse tags
       let tagList: string[] = [];
@@ -117,6 +120,10 @@ export const publishingAgent = {
         categoryId: params.categoryId || '22',
         privacyStatus: params.privacyStatus.toLowerCase() as any,
         thumbnailPath: resolvedThumbPath,
+        tokens: {
+          access_token: account.accessToken,
+          refresh_token: account.refreshToken,
+        },
       });
 
       // Record published video
