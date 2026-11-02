@@ -28,7 +28,7 @@ export const Layout: React.FC = () => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         <Header />
-        <main className="flex-1 p-6 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-6 w-full">
           <Outlet context={{ activeProjectId, setActiveProjectId }} />
         </main>
       </div>

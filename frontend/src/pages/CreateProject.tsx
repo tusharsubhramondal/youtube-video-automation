@@ -141,7 +141,7 @@ export const CreateProject: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="w-full max-w-5xl space-y-6 pb-12">
       <div>
         <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
           <Sparkles className="w-6 h-6 text-brand-400" />

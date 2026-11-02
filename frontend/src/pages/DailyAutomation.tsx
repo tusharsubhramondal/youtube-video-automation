@@ -141,7 +141,7 @@ export const DailyAutomation: React.FC = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-12">
+    <div className="w-full space-y-8 pb-12">
       {/* Hero Banner */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-brand-950/40 to-slate-900 border border-slate-800 p-6 md:p-8 shadow-xl">
         <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />

@@ -28,7 +28,7 @@ export const AppSettings: React.FC = () => {
   }, []);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="w-full max-w-5xl space-y-6 pb-12">
       {/* Header */}
       <div className="pb-4 border-b border-slate-800">
         <div className="flex items-center gap-2 mb-1">

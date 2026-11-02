@@ -75,7 +75,7 @@ export const SocialSettings: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-12">
+    <div className="w-full space-y-6 pb-12">
       {/* Header */}
       <div className="pb-4 border-b border-slate-800 flex items-center justify-between">
         <div>
