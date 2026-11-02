@@ -76,16 +76,19 @@ export const CreateProject: React.FC = () => {
   };
 
   const categories = [
+    'Mystery & Unsolved Mysteries',
+    'History & Mystery',
+    'True Crime & Anomalies',
+    'Horror & Creepy Tales',
     'Technology & AI',
-    'Comedy & Humor',
-    'Dance & Performance',
     'Entertainment',
     'Education & Science',
+    'Comedy & Humor',
+    'Dance & Performance',
     'Finance & Crypto',
     'Health & Fitness',
     'Gaming',
     'Motivation & Self-Improvement',
-    'History & Mystery',
   ];
 
   const visualStyles = [

@@ -19,25 +19,26 @@ import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 
 const YOUTUBE_CATEGORIES = [
+  { id: '24', name: 'Entertainment (Mystery, Horror, True Crime & Stories)' },
+  { id: '27', name: 'Education (History, Documentaries & Case Studies)' },
   { id: '28', name: 'Science & Technology' },
-  { id: '24', name: 'Entertainment' },
-  { id: '27', name: 'Education' },
-  { id: '23', name: 'Comedy' },
+  { id: '1', name: 'Film & Animation (Cinematic & Short Films)' },
+  { id: '22', name: 'People & Blogs (Vlogs & Personal Storytelling)' },
+  { id: '23', name: 'Comedy & Humor' },
   { id: '20', name: 'Gaming' },
-  { id: '22', name: 'People & Blogs' },
   { id: '26', name: 'Howto & Style' },
-  { id: '10', name: 'Music' },
-  { id: '17', name: 'Sports' },
-  { id: '1', name: 'Film & Animation' },
+  { id: '10', name: 'Music & Performance' },
+  { id: '17', name: 'Sports & Fitness' },
   { id: '25', name: 'News & Politics' },
 ];
 
 const mapCategoryToId = (category?: string): string => {
-  if (!category) return '28';
+  if (!category) return '24';
   const c = category.toLowerCase();
+  if (c.includes('mystery') || c.includes('crime') || c.includes('horror') || c.includes('paranormal')) return '24';
+  if (c.includes('history') || c.includes('docu') || c.includes('educat')) return '27';
   if (c.includes('science') || c.includes('tech') || c.includes('ai')) return '28';
   if (c.includes('comedy') || c.includes('humor')) return '23';
-  if (c.includes('educat')) return '27';
   if (c.includes('game') || c.includes('gaming')) return '20';
   if (c.includes('music') || c.includes('dance')) return '10';
   if (c.includes('sport') || c.includes('fitness')) return '17';
@@ -346,8 +347,8 @@ export const YouTubeIntegration: React.FC = () => {
                     </option>
                   ))}
                 </select>
-                <span className="text-[10px] text-slate-500 mt-1 block">
-                  Determines recommendation cluster, topic channels, and search filters on YouTube.
+                <span className="text-[10px] text-slate-400 mt-1 block">
+                  YouTube groups genres into official categories. For <strong className="text-brand-400">Mystery, Horror & True Crime</strong>, select <strong className="text-white">Entertainment (24)</strong> or <strong className="text-white">Education (27)</strong>.
                 </span>
               </div>
 

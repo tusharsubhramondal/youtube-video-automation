@@ -34,6 +34,23 @@ export async function initQueues() {
     redisConnection.on('connect', () => {
       isRedisAvailable = true;
       logger.info('Connected to Redis server for BullMQ background queues.');
+      
+      if (!redisConnection) return;
+      // Instantiate workers for all registered handlers upon Redis connection
+      for (const [qName, proc] of inMemoryWorkers.entries()) {
+        try {
+          new Worker(
+            qName,
+            async (job: Job) => {
+              return await proc(job.data);
+            },
+            { connection: redisConnection }
+          );
+          logger.info(`BullMQ Worker active for queue: ${qName}`);
+        } catch (err: any) {
+          logger.warn(`Could not start BullMQ worker for ${qName}: ${err.message}`);
+        }
+      }
     });
 
     videoRenderQueue = new Queue('video-renders', { connection: redisConnection });

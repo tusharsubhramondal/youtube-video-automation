@@ -46,6 +46,23 @@ export class GoogleYouTubeProvider implements YouTubeProvider {
     });
   }
 
+  async ensureValidToken(): Promise<void> {
+    try {
+      const credentials = this.oauth2Client.credentials;
+      if (credentials?.refresh_token) {
+        const res = await this.oauth2Client.getAccessToken();
+        if (res?.token) {
+          this.oauth2Client.setCredentials({
+            ...this.oauth2Client.credentials,
+            access_token: res.token,
+          });
+        }
+      }
+    } catch (err: any) {
+      logger.warn(`[GoogleYouTubeProvider] Token refresh check warning: ${err.message}`);
+    }
+  }
+
   getAuthUrl(): string {
     const scopes = [
       'https://www.googleapis.com/auth/youtube.upload',
@@ -93,11 +110,13 @@ export class GoogleYouTubeProvider implements YouTubeProvider {
       this.setCredentials(params.tokens);
     }
 
+    await this.ensureValidToken();
+
     const youtube = google.youtube({ version: 'v3', auth: this.oauth2Client });
 
     logger.info(`Starting YouTube video upload: "${params.title}"`);
 
-    const res = await youtube.videos.insert({
+    const insertPayload = () => ({
       part: ['snippet', 'status'],
       requestBody: {
         snippet: {
@@ -115,6 +134,25 @@ export class GoogleYouTubeProvider implements YouTubeProvider {
         body: fs.createReadStream(params.videoFilePath),
       },
     });
+
+    let res: any;
+    try {
+      res = await youtube.videos.insert(insertPayload());
+    } catch (uploadErr: any) {
+      const isAuthError = uploadErr.status === 401 || uploadErr.code === 401 || uploadErr.message?.includes('Invalid Credentials');
+      if (isAuthError && params.tokens?.refresh_token) {
+        logger.warn('[GoogleYouTubeProvider] Auth error encountered during upload. Refreshing token and retrying...');
+        const refreshed = await this.oauth2Client.refreshAccessToken();
+        if (refreshed.credentials) {
+          this.oauth2Client.setCredentials(refreshed.credentials);
+          res = await youtube.videos.insert(insertPayload());
+        } else {
+          throw uploadErr;
+        }
+      } else {
+        throw uploadErr;
+      }
+    }
 
     const videoId = res.data.id!;
     logger.info(`Uploaded video to YouTube successfully. Video ID: ${videoId}`);

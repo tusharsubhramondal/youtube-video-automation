@@ -151,6 +151,8 @@ export const editingAgent = {
                 `scale=${width * 2}:${height * 2}`,
                 `zoompan=z='min(zoom+0.0015,1.25)':d=${totalFrames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=${width}x${height}:fps=${fps}`,
                 transitionFilter,
+                'setsar=1',
+                `setdar=${isShorts ? '9/16' : '16/9'}`,
                 'format=yuv420p',
               ]);
           } else if (sourceFile) {
@@ -162,6 +164,8 @@ export const editingAgent = {
                 `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:black`,
                 `fps=${fps}`,
                 transitionFilter,
+                'setsar=1',
+                `setdar=${isShorts ? '9/16' : '16/9'}`,
                 'format=yuv420p',
               ]);
           } else {
@@ -169,7 +173,7 @@ export const editingAgent = {
             cmd = cmd
               .input(`testsrc=duration=${sceneDuration}:size=${width}x${height}:rate=${fps}`)
               .inputFormat('lavfi')
-              .videoFilters([transitionFilter, 'format=yuv420p']);
+              .videoFilters([transitionFilter, 'setsar=1', `setdar=${isShorts ? '9/16' : '16/9'}`, 'format=yuv420p']);
           }
 
           cmd
@@ -282,9 +286,10 @@ export const editingAgent = {
           videoFilters.push(`subtitles='${escapedSrtPath}':force_style='FontSize=${subtitleFontSize},Bold=1,PrimaryColour=&H00${primaryColorHex},OutlineColour=&H00000000,BorderStyle=3,BackColour=&H80000000,MarginV=${verticalMargin}'`);
         }
 
-        if (videoFilters.length > 0) {
-          master = master.videoFilters(videoFilters);
-        }
+        // Ensure explicit square pixel aspect ratio (SAR 1:1) and proper DAR (9:16 for Shorts, 16:9 for Regular)
+        const targetDar = isShorts ? '9/16' : '16/9';
+        videoFilters.push(`setsar=1,setdar=${targetDar}`);
+        master = master.videoFilters(videoFilters);
 
         // Mix Voice and Music with volume ducking
         master = master
@@ -298,6 +303,7 @@ export const editingAgent = {
             '-map', '[aout]',
             '-c:v', 'libx264',
             '-pix_fmt', 'yuv420p',
+            '-aspect', isShorts ? '9:16' : '16:9',
             '-c:a', 'aac',
             '-b:a', '192k',
             '-t', `${totalEstimatedDuration}`,

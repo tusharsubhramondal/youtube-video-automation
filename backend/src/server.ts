@@ -21,6 +21,11 @@ import voiceRoutes from './routes/voice.routes.js';
 import metaRoutes from './routes/meta.routes.js';
 import automationRoutes from './routes/automation.routes.js';
 
+// Fix for BigInt JSON serialization in Express/Prisma
+(BigInt.prototype as any).toJSON = function () {
+  return Number(this);
+};
+
 const app = express();
 
 // Middlewares

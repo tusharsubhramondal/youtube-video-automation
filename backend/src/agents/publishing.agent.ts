@@ -3,6 +3,7 @@ import { getYouTubeProvider } from '../providers/youtube/index.js';
 import { metaGraphProvider } from '../providers/meta/meta.provider.js';
 import { logger } from '../utils/logger.js';
 import { config } from '../config/index.js';
+import { resolveAssetLocalPath } from '../utils/storage.util.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -105,10 +106,15 @@ export const publishingAgent = {
       // Resolve local thumbnail file path on disk
       let resolvedThumbPath: string | undefined;
       if (project.thumbnailUrl) {
-        const thumbFilename = path.basename(project.thumbnailUrl);
-        const candidate = path.join(config.storage.uploadDir, thumbFilename);
-        if (fs.existsSync(candidate)) {
-          resolvedThumbPath = candidate;
+        const resolved = resolveAssetLocalPath(project.thumbnailUrl);
+        if (resolved && fs.existsSync(resolved)) {
+          resolvedThumbPath = resolved;
+        } else {
+          const thumbFilename = path.basename(project.thumbnailUrl);
+          const candidate = path.join(config.storage.uploadDir, thumbFilename);
+          if (fs.existsSync(candidate)) {
+            resolvedThumbPath = candidate;
+          }
         }
       }
 

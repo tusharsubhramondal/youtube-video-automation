@@ -412,14 +412,14 @@ export const DailyAutomation: React.FC = () => {
                 <label className="text-slate-300 block font-medium mb-1.5">Target Content Niche / Channel Theme</label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
                   {[
+                    { label: 'Unsolved Mysteries & Lore', icon: '🕵️‍♂️' },
+                    { label: 'History & Maritime Mysteries', icon: '⚓' },
                     { label: 'Comedy & Relatable Skits', icon: '🎭' },
-                    { label: 'Dance & Viral Choreography', icon: '💃' },
                     { label: 'Tech & AI Facts', icon: '🤖' },
                     { label: 'Entertainment & Celebs', icon: '🎬' },
                     { label: 'Mindblowing Science', icon: '🔬' },
-                    { label: 'Strange History Facts', icon: '📜' },
                     { label: 'Money & Wealth Hacks', icon: '💰' },
-                    { label: 'Fitness & Workout Motivation', icon: '⚡' },
+                    { label: 'Dance & Viral Choreography', icon: '💃' },
                   ].map((preset) => (
                     <button
                       key={preset.label}
