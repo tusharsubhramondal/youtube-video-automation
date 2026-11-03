@@ -249,7 +249,7 @@ export const CreateProject: React.FC = () => {
               onClick={() => {
                 setFormat('SHORTS');
                 setEnableSubtitles(false);
-                if (targetDuration > 60) setTargetDuration(60);
+                if (targetDuration > 180) setTargetDuration(60);
               }}
               className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center gap-4 ${
                 format === 'SHORTS'
@@ -265,12 +265,16 @@ export const CreateProject: React.FC = () => {
                   <h4 className="font-bold text-white text-sm">YouTube Shorts</h4>
                   {format === 'SHORTS' && <Check className="w-4 h-4 text-brand-400" />}
                 </div>
-                <p className="text-xs text-slate-400 mt-0.5">Vertical 9:16 (1080x1920) • 15s to 60s</p>
+                <p className="text-xs text-slate-400 mt-0.5">Vertical 9:16 (1080x1920) • 15s to 3m</p>
               </div>
             </div>
 
             <div
-              onClick={() => setFormat('REGULAR')}
+              onClick={() => {
+                setFormat('REGULAR');
+                setEnableSubtitles(true);
+                if (targetDuration < 60) setTargetDuration(600);
+              }}
               className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center gap-4 ${
                 format === 'REGULAR'
                   ? 'bg-brand-950/40 border-brand-500 ring-1 ring-brand-500 text-white'
@@ -285,28 +289,76 @@ export const CreateProject: React.FC = () => {
                   <h4 className="font-bold text-white text-sm">Regular Video</h4>
                   {format === 'REGULAR' && <Check className="w-4 h-4 text-brand-400" />}
                 </div>
-                <p className="text-xs text-slate-400 mt-0.5">Landscape 16:9 (1920x1080) • 1m to 10m</p>
+                <p className="text-xs text-slate-400 mt-0.5">Landscape 16:9 (1920x1080) • 1m to 15m Documentary</p>
               </div>
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Target Duration: <span className="text-brand-400 font-mono font-bold">{targetDuration} seconds</span> ({Math.round(targetDuration / 60 * 10) / 10} min)
-            </label>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-semibold text-slate-300">
+                Target Duration: <span className="text-brand-400 font-mono font-bold">{targetDuration} seconds</span> ({Math.round(targetDuration / 60 * 10) / 10} min)
+              </label>
+              <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                <span>Exact seconds:</span>
+                <input
+                  type="number"
+                  min={format === 'SHORTS' ? 15 : 30}
+                  max={format === 'SHORTS' ? 180 : 900}
+                  value={targetDuration}
+                  onChange={(e) => setTargetDuration(Math.max(15, Math.min(format === 'SHORTS' ? 180 : 900, Number(e.target.value))))}
+                  className="w-20 bg-slate-950 border border-slate-800 rounded px-2 py-0.5 text-xs text-white font-mono text-center focus:ring-1 focus:ring-brand-500"
+                />
+              </div>
+            </div>
+
+            {/* Quick Presets */}
+            <div className="flex flex-wrap gap-1.5 pt-0.5">
+              {(format === 'SHORTS'
+                ? [
+                    { label: '30s (Viral Short)', val: 30 },
+                    { label: '45s (Reel Sweetspot)', val: 45 },
+                    { label: '60s (Standard)', val: 60 },
+                    { label: '90s (In-depth)', val: 90 },
+                    { label: '3 Min (Max Short)', val: 180 },
+                  ]
+                : [
+                    { label: '2 Min (120s)', val: 120 },
+                    { label: '5 Min (300s)', val: 300 },
+                    { label: '8 Min (480s)', val: 480 },
+                    { label: '10 Min (600s)', val: 600 },
+                    { label: '12 Min (720s)', val: 720 },
+                    { label: '15 Min (900s)', val: 900 },
+                  ]
+              ).map((preset) => (
+                <button
+                  key={preset.val}
+                  type="button"
+                  onClick={() => setTargetDuration(preset.val)}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium border transition-colors ${
+                    targetDuration === preset.val
+                      ? 'bg-brand-500/20 border-brand-500 text-brand-300'
+                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+
             <input
               type="range"
               min={format === 'SHORTS' ? '15' : '30'}
-              max={format === 'SHORTS' ? '60' : '300'}
+              max={format === 'SHORTS' ? '180' : '900'}
               step="5"
               value={targetDuration}
               onChange={(e) => setTargetDuration(Number(e.target.value))}
               className="w-full accent-brand-500 cursor-pointer"
             />
-            <div className="flex justify-between text-[11px] text-slate-400 font-mono mt-1">
+            <div className="flex justify-between text-[11px] text-slate-400 font-mono">
               <span>{format === 'SHORTS' ? '15s' : '30s'}</span>
-              <span>{format === 'SHORTS' ? '30s' : '2.5m'}</span>
-              <span>{format === 'SHORTS' ? '60s' : '5m'}</span>
+              <span>{format === 'SHORTS' ? '60s' : '7.5m'}</span>
+              <span>{format === 'SHORTS' ? '3m' : '15m (Documentary)'}</span>
             </div>
           </div>
         </Card>

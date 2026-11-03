@@ -100,7 +100,7 @@ Return a valid JSON object matching this schema:
       const isShorts = params.format === 'SHORTS';
       const sceneCount = isShorts
         ? Math.max(3, Math.round(params.targetDuration / 5))
-        : Math.max(4, Math.round(params.targetDuration / 12));
+        : Math.max(4, Math.min(40, Math.round(params.targetDuration / 20)));
 
       const isBengali = params.language?.toLowerCase().includes('bengali') || params.language === 'bn' || params.language === 'বাংলা';
       const languageInstruction = isBengali
