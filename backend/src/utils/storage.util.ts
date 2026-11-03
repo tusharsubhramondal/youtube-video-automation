@@ -51,23 +51,37 @@ export function resolveAssetLocalPath(url?: string | null): string | null {
   // 1. Uploads paths
   if (cleanUrl.startsWith('/uploads/')) {
     const rel = cleanUrl.replace(/^\/uploads\//, '');
-    const directPath = path.join(config.storage.uploadDir, rel);
-    if (fs.existsSync(directPath)) return directPath;
-
-    // Fallback to flat root filename for legacy assets
-    const flatPath = path.join(config.storage.uploadDir, path.basename(cleanUrl));
-    if (fs.existsSync(flatPath)) return flatPath;
+    const candidates = [
+      path.join(config.storage.uploadDir, rel),
+      path.resolve('uploads', rel),
+      path.resolve('backend/uploads', rel),
+      path.join(process.cwd(), 'backend', 'uploads', rel),
+      path.join(process.cwd(), 'uploads', rel),
+      path.join(config.storage.uploadDir, path.basename(cleanUrl)),
+      path.resolve('uploads', path.basename(cleanUrl)),
+      path.resolve('backend/uploads', path.basename(cleanUrl)),
+    ];
+    for (const p of candidates) {
+      if (fs.existsSync(p)) return p;
+    }
   }
 
   // 2. Renders paths
   if (cleanUrl.startsWith('/renders/')) {
     const rel = cleanUrl.replace(/^\/renders\//, '');
-    const directPath = path.join(config.storage.renderDir, rel);
-    if (fs.existsSync(directPath)) return directPath;
-
-    // Fallback to flat root filename for legacy assets
-    const flatPath = path.join(config.storage.renderDir, path.basename(cleanUrl));
-    if (fs.existsSync(flatPath)) return flatPath;
+    const candidates = [
+      path.join(config.storage.renderDir, rel),
+      path.resolve('renders', rel),
+      path.resolve('backend/renders', rel),
+      path.join(process.cwd(), 'backend', 'renders', rel),
+      path.join(process.cwd(), 'renders', rel),
+      path.join(config.storage.renderDir, path.basename(cleanUrl)),
+      path.resolve('renders', path.basename(cleanUrl)),
+      path.resolve('backend/renders', path.basename(cleanUrl)),
+    ];
+    for (const p of candidates) {
+      if (fs.existsSync(p)) return p;
+    }
   }
 
   return null;

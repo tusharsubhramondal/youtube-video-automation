@@ -32,6 +32,7 @@ export const seoAgent = {
         data: { currentStage: 'seo' },
       });
 
+      const totalDuration = project.scenes.reduce((acc, s) => acc + (s.duration || 5), 0);
       const llm = await getLLMProvider('SEO');
       const seoData = await llm.generateSeoMetadata({
         topic: project.topic,
@@ -49,17 +50,34 @@ export const seoAgent = {
             durationSeconds: s.duration || 5,
           })),
           callToAction: 'Subscribe for more videos',
-          totalEstimatedDuration: project.scenes.reduce((acc, s) => acc + (s.duration || 5), 0),
+          totalEstimatedDuration: totalDuration,
         },
       });
 
       const selectedTitle = seoData.titles[0] || project.title;
 
+      // Sanity Guard: Filter out any timestamps exceeding the actual video duration
+      let cleanDescription = seoData.description;
+      const descLines = cleanDescription.split('\n');
+      const filteredLines = descLines.filter((line) => {
+        const timeMatch = line.match(/\b(\d{1,2}):(\d{2})\b/);
+        if (timeMatch) {
+          const m = parseInt(timeMatch[1], 10);
+          const s = parseInt(timeMatch[2], 10);
+          const timestampSeconds = m * 60 + s;
+          if (timestampSeconds > totalDuration + 5) {
+            return false;
+          }
+        }
+        return true;
+      });
+      cleanDescription = filteredLines.join('\n');
+
       await prisma.videoProject.update({
         where: { id: projectId },
         data: {
           seoTitle: selectedTitle,
-          seoDescription: seoData.description,
+          seoDescription: cleanDescription,
           seoTags: JSON.stringify(seoData.tags),
           status: 'READY_TO_PUBLISH',
           currentStage: 'ready_to_publish',

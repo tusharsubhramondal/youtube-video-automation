@@ -179,6 +179,22 @@ Return a valid JSON object matching this exact schema:
           ? `CRITICAL LANGUAGE REQUIREMENT: All titles, description, and thumbnailTextIdeas MUST be written in "${params.language}".`
           : ``;
 
+      let cumulativeSec = 0;
+      const timelineLines: string[] = [];
+      if (params.script.scenes && params.script.scenes.length > 0) {
+        for (const s of params.script.scenes) {
+          const mins = Math.floor(cumulativeSec / 60);
+          const secs = Math.floor(cumulativeSec % 60);
+          const formatted = `${mins}:${secs.toString().padStart(2, '0')}`;
+          timelineLines.push(`${formatted} - Scene ${s.sceneNumber}: ${s.narrationText ? s.narrationText.substring(0, 60).replace(/\n/g, ' ') : ''}`);
+          cumulativeSec += (s.durationSeconds || 5);
+        }
+      }
+      const totalDurSec = params.script.totalEstimatedDuration || cumulativeSec;
+      const totalMins = Math.floor(totalDurSec / 60);
+      const totalSecs = Math.floor(totalDurSec % 60);
+      const formattedTotal = `${totalMins}:${totalSecs.toString().padStart(2, '0')}`;
+
       const prompt = `You are a YouTube SEO Master.
 Generate hyper-optimized YouTube metadata for this video:
 Topic: "${params.topic}"
@@ -186,13 +202,28 @@ Category: "${params.category}"
 Script Title: "${params.script.title}"
 Script Hook: "${params.script.hook}"
 ${params.language ? `Language: "${params.language}"` : ''}
+Exact Video Duration: ${formattedTotal} (${Math.round(totalDurSec)} seconds)
+
+SCENE TIMELINE & ACCURATE START TIMES:
+${timelineLines.slice(0, 35).join('\n')}
 
 ${languageDirective}
+
+CRITICAL CHAPTER / TIMESTAMP INSTRUCTIONS:
+- The video duration is ONLY ${formattedTotal}.
+- NEVER invent, extrapolate, or generate timestamps exceeding ${formattedTotal}.
+- In the "description", provide 5 to 7 clean YouTube chapters with engaging titles.
+- The first chapter MUST start at 0:00.
+- All chapter timestamps MUST match actual scene start times from the timeline above (e.g. 0:00, 0:13, etc.) and stay strictly under ${formattedTotal}.
+- Example Chapter Format:
+  0:00 - Chapter Title
+  0:13 - Chapter Title
+  ...
 
 Return valid JSON with:
 {
   "titles": string[] (5 high-CTR title variations under 80 characters, avoiding spammy clickbait),
-  "description": string (SEO-rich description including timestamps/chapters, hook, and call to action),
+  "description": string (SEO-rich description including the exact timestamps/chapters strictly under ${formattedTotal}, hook, summary, and call to action),
   "tags": string[] (15-20 relevant comma-separated YouTube tags),
   "hashtags": string[] (5 trending hashtags starting with #),
   "thumbnailTextIdeas": string[] (4 punchy 2-4 word phrases to put on the thumbnail image)

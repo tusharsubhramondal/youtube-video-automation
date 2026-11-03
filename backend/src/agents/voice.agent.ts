@@ -82,12 +82,13 @@ export const voiceAgent = {
           },
         });
 
-        // Update scene audio URL and duration matching spoken voice
+        // Update scene audio URL and natural duration matching spoken voice (+ 0.8s breath/pause)
+        const naturalDuration = Math.max(3.0, Math.round((ttsResult.durationSeconds + 0.8) * 10) / 10);
         await prisma.videoScene.update({
           where: { id: scene.id },
           data: {
             audioUrl: ttsResult.url,
-            duration: Math.max(scene.duration, ttsResult.durationSeconds),
+            duration: naturalDuration,
           },
         });
 

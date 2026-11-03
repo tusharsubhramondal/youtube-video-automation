@@ -367,8 +367,11 @@ export const VideoPreview: React.FC = () => {
               isLoading={isRendering}
               onClick={handleStartRender}
             >
-              {project.finalVideoUrl ? 'Re-Render Master MP4' : 'Render Video (FFmpeg)'}
+              {project.finalVideoUrl ? 'Re-Mix Audio & Render Master MP4' : 'Mix Audio & Render (FFmpeg)'}
             </Button>
+            <p className="text-[11px] text-slate-400 text-center mt-1">
+              Re-mixes existing audio, scene visuals & subtitles in seconds without re-generating AI assets.
+            </p>
           </Card>
 
           {/* Render Metadata */}

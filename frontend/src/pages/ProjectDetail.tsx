@@ -19,7 +19,7 @@ import {
   Download,
   Volume2,
 } from 'lucide-react';
-import { projectService, agentService, metaService } from '../services/api';
+import { projectService, agentService, metaService, renderService } from '../services/api';
 import { VideoProject } from '../types';
 import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
@@ -32,10 +32,25 @@ export const ProjectDetail: React.FC = () => {
   const [project, setProject] = useState<VideoProject | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRunningPipeline, setIsRunningPipeline] = useState(false);
+  const [isRemixing, setIsRemixing] = useState(false);
   const [publishedReels, setPublishedReels] = useState<any[]>([]);
   const [isPublishingReel, setIsPublishingReel] = useState<string | null>(null);
   const [playingAudioUrl, setPlayingAudioUrl] = useState<string | null>(null);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+
+  const handleRemixAudio = async () => {
+    if (!project) return;
+    setIsRemixing(true);
+    try {
+      await renderService.triggerRender(project.id);
+      navigate(`/project/${project.id}/preview`);
+    } catch (err: any) {
+      console.error('Failed to trigger re-mix render:', err);
+      alert('Failed to start render: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsRemixing(false);
+    }
+  };
 
   const togglePlayAudio = (url: string) => {
     if (playingAudioUrl === url && audioElement) {
@@ -177,6 +192,16 @@ export const ProjectDetail: React.FC = () => {
             onClick={() => navigate(`/project/${project.id}/agents`)}
           >
             Agent Monitor
+          </Button>
+
+          <Button
+            variant="secondary"
+            isLoading={isRemixing}
+            icon={<Volume2 className="w-4 h-4 text-emerald-400" />}
+            onClick={handleRemixAudio}
+            title="Fast re-render: Mix audio, visuals and subtitles without regenerating AI images or text"
+          >
+            Re-Mix Audio & Render
           </Button>
 
           <Button

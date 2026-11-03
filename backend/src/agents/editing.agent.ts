@@ -54,6 +54,39 @@ export const editingAgent = {
         data: { status: 'EDITING', currentStage: 'editing' },
       });
 
+      // -------------------------------------------------------------
+      // AUTO-SYNC SCENE DURATIONS WITH SPOKEN AUDIO (Option B)
+      // Adapts each scene's visual length to the natural spoken voice
+      // -------------------------------------------------------------
+      logger.info('[EditingAgent] Harmonizing scene durations with narration audio length...');
+      for (const scene of project.scenes) {
+        if (scene.audioUrl) {
+          const audioPath = resolveAssetLocalPath(scene.audioUrl);
+          if (audioPath && fs.existsSync(audioPath)) {
+            try {
+              const audioDur: number = await new Promise((res, rej) => {
+                ffmpeg.ffprobe(audioPath, (err, metadata) => {
+                  if (err) rej(err);
+                  else res(metadata.format?.duration || 0);
+                });
+              });
+
+              if (audioDur > 0) {
+                // Natural speaking duration + 0.8s breath/transition pause
+                const naturalDuration = Math.max(3.0, Math.round((audioDur + 0.8) * 10) / 10);
+                scene.duration = naturalDuration;
+                await prisma.videoScene.update({
+                  where: { id: scene.id },
+                  data: { duration: naturalDuration },
+                }).catch(() => {});
+              }
+            } catch (err: any) {
+              logger.warn(`Could not probe audio for scene ${scene.sceneNumber}: ${err.message}`);
+            }
+          }
+        }
+      }
+
       const isShorts = project.format === 'SHORTS';
       const targetResolution = options?.resolution || project.settings?.resolution || '1080p';
       let width = isShorts ? 1080 : 1920;
@@ -218,14 +251,18 @@ export const editingAgent = {
         const segmentPath = path.join(config.storage.tempDir, `seg_${project.id}_s${scene.sceneNumber}_${Date.now()}.mp3`);
         await new Promise<void>((resolve, reject) => {
           let cmd = ffmpeg();
+          const targetDur = scene.duration || 5.0;
+
           if (audioFile) {
-            cmd = cmd.input(audioFile);
+            cmd = cmd
+              .input(audioFile)
+              .audioFilters(['apad']);
           } else {
-            cmd = cmd.input(`aevalsrc=0:d=${scene.duration}`).inputFormat('lavfi');
+            cmd = cmd.input(`aevalsrc=0:d=${targetDur}`).inputFormat('lavfi');
           }
 
           cmd
-            .outputOptions(['-c:a', 'libmp3lame', '-t', `${scene.duration}`])
+            .outputOptions(['-c:a', 'libmp3lame', '-ar', '44100', '-b:a', '192k', '-t', `${targetDur}`])
             .output(segmentPath)
             .on('end', () => {
               sceneAudioSegments.push(segmentPath);
