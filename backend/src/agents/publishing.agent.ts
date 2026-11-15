@@ -112,6 +112,7 @@ export const publishingAgent = {
       const provider = getYouTubeProvider({
         access_token: account.accessToken,
         refresh_token: account.refreshToken,
+        accountId: account.id,
       });
 
       // Parse tags
@@ -333,6 +334,7 @@ export const publishingAgent = {
     const provider = getYouTubeProvider({
       access_token: account.accessToken,
       refresh_token: account.refreshToken,
+      accountId: account.id,
     });
 
     if (!provider.uploadCaptions) {

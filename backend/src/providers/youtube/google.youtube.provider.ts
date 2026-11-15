@@ -8,8 +8,9 @@ import { prisma } from '../../services/prisma.service.js';
 export class GoogleYouTubeProvider implements YouTubeProvider {
   name = 'Google YouTube Data API v3';
   private oauth2Client: any;
+  private accountId?: string;
 
-  constructor(tokens?: { access_token?: string; refresh_token?: string | null }) {
+  constructor(tokens?: { access_token?: string; refresh_token?: string | null; accountId?: string }) {
     this.oauth2Client = new google.auth.OAuth2(
       config.youtube.clientId,
       config.youtube.clientSecret,
@@ -17,16 +18,17 @@ export class GoogleYouTubeProvider implements YouTubeProvider {
     );
 
     if (tokens) {
+      this.accountId = tokens.accountId;
       this.setCredentials(tokens);
     }
 
-    // Auto-update tokens in database when refreshed by Google
+    // Auto-update tokens in database for the specific account when refreshed by Google
     this.oauth2Client.on('tokens', async (newTokens: any) => {
       logger.info('[GoogleYouTubeProvider] OAuth access token refreshed automatically by Google.');
       try {
-        if (newTokens.access_token) {
-          await prisma.youTubeAccount.updateMany({
-            where: { isConnected: true },
+        if (newTokens.access_token && this.accountId) {
+          await prisma.youTubeAccount.update({
+            where: { id: this.accountId },
             data: {
               accessToken: newTokens.access_token,
               ...(newTokens.refresh_token ? { refreshToken: newTokens.refresh_token } : {}),
@@ -74,7 +76,7 @@ export class GoogleYouTubeProvider implements YouTubeProvider {
     return this.oauth2Client.generateAuthUrl({
       access_type: 'offline',
       scope: scopes,
-      prompt: 'consent',
+      prompt: 'select_account consent',
     });
   }
 

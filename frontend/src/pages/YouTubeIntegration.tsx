@@ -55,6 +55,7 @@ export const YouTubeIntegration: React.FC = () => {
   const [isConfigured, setIsConfigured] = useState(false);
   const [projects, setProjects] = useState<VideoProject[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [selectedProject, setSelectedProject] = useState<VideoProject | null>(null);
   const [privacyStatus, setPrivacyStatus] = useState<'PRIVATE' | 'UNLISTED' | 'PUBLIC'>('PRIVATE');
   const [categoryId, setCategoryId] = useState<string>('28');
@@ -80,6 +81,10 @@ export const YouTubeIntegration: React.FC = () => {
       setAccounts(accData.accounts);
       setIsConfigured(accData.isConfigured);
       setProjects(projList);
+
+      if (accData.accounts.length > 0) {
+        setSelectedAccountId((prev) => prev || accData.accounts[0].id);
+      }
 
       const activeId = localStorage.getItem('activeProjectId');
       if (activeId && projList.some((p: VideoProject) => p.id === activeId)) {
@@ -149,11 +154,17 @@ export const YouTubeIntegration: React.FC = () => {
       return;
     }
 
+    const targetAccountId = selectedAccountId || accounts[0]?.id;
+    if (!targetAccountId) {
+      alert('Please connect or select a YouTube channel first.');
+      return;
+    }
+
     setIsPublishing(true);
     setSubtitleSyncSuccess(null);
     try {
       const result = await youtubeService.publishVideo(selectedProject.id, {
-        youtubeAccountId: accounts[0]?.id,
+        youtubeAccountId: targetAccountId,
         title: selectedProject.seoTitle || selectedProject.title,
         description: selectedProject.seoDescription || selectedProject.topic,
         tags: selectedProject.seoTags || undefined,
@@ -175,10 +186,11 @@ export const YouTubeIntegration: React.FC = () => {
 
   const handleSyncSubtitles = async () => {
     if (!selectedProject) return;
+    const targetAccountId = selectedAccountId || accounts[0]?.id;
     setIsSyncingSubtitles(true);
     setSubtitleSyncSuccess(null);
     try {
-      const res = await youtubeService.syncSubtitles(selectedProject.id, accounts[0]?.id);
+      const res = await youtubeService.syncSubtitles(selectedProject.id, targetAccountId);
       setSubtitleSyncSuccess(`Subtitles successfully uploaded & attached to YouTube! Track: ${res.language.toUpperCase()} (${res.name})`);
     } catch (err: any) {
       console.error('Subtitle sync error:', err);
@@ -282,6 +294,18 @@ export const YouTubeIntegration: React.FC = () => {
                     </button>
                   </div>
                 ))}
+
+                <div className="pt-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full text-xs"
+                    icon={<Share2 className="w-3.5 h-3.5 text-rose-500" />}
+                    onClick={isConfigured ? handleConnectOAuth : handleConnectMock}
+                  >
+                    + Connect Another Channel
+                  </Button>
+                </div>
               </div>
             )}
           </Card>
@@ -305,8 +329,36 @@ export const YouTubeIntegration: React.FC = () => {
               Publish Video to YouTube
             </h3>
 
-            {/* Select project */}
+            {/* Select project & target channel */}
             <div className="space-y-3 text-xs">
+              {/* Target YouTube Channel Selector */}
+              <div>
+                <label className="text-slate-300 block font-medium mb-1 flex items-center justify-between">
+                  <span>Target YouTube Channel</span>
+                  <span className="text-slate-400 font-normal text-[11px]">
+                    {accounts.length} channel{accounts.length !== 1 ? 's' : ''} connected
+                  </span>
+                </label>
+                {accounts.length === 0 ? (
+                  <div className="p-2.5 bg-slate-950 border border-amber-900/40 rounded-lg text-xs text-amber-300 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
+                    <span>No channel connected. Connect a channel using the panel on the left.</span>
+                  </div>
+                ) : (
+                  <select
+                    value={selectedAccountId || accounts[0]?.id}
+                    onChange={(e) => setSelectedAccountId(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white focus:ring-1 focus:ring-brand-500 font-medium"
+                  >
+                    {accounts.map((acc) => (
+                      <option key={acc.id} value={acc.id}>
+                        📺 {acc.channelTitle} ({acc.channelId})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
               <div>
                 <label className="text-slate-300 block font-medium mb-1">Select Video Project</label>
                 <select

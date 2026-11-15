@@ -49,19 +49,34 @@ router.get('/oauth2callback', async (req: Request, res: Response, next: NextFunc
   }
 });
 
-// Connect Mock Channel for local testing / demo without API keys
+// Connect Mock Channel for local testing / demo without API keys (supports adding multiple mock channels)
 router.post('/connect-mock', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const mockChannel = await prisma.youTubeAccount.upsert({
-      where: { channelId: 'UC_MOCK_CHANNEL_123' },
-      update: { isConnected: true },
-      create: {
-        channelId: 'UC_MOCK_CHANNEL_123',
-        channelTitle: 'AI Creator Studio (Sandbox Channel)',
-        channelDescription: 'Official test channel for AI YouTube Video Automation Platform',
-        avatarUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150',
-        accessToken: 'mock_access_token_valid',
-        refreshToken: 'mock_refresh_token_valid',
+    const existingAccounts = await prisma.youTubeAccount.findMany({
+      where: { channelId: { startsWith: 'UC_MOCK_' } },
+    });
+    const channelNumber = existingAccounts.length + 1;
+    const channelNames = [
+      'AI Documentary Studio',
+      'Mystery Shorts Network',
+      'History & Science Vault',
+      'True Crime Chronicles',
+      'Daily AI Digest',
+    ];
+    const nameIndex = (channelNumber - 1) % channelNames.length;
+    const channelTitle = channelNumber === 1
+      ? 'AI Creator Studio (Sandbox Channel)'
+      : `${channelNames[nameIndex]} (Sandbox #${channelNumber})`;
+    const mockChannelId = channelNumber === 1 ? 'UC_MOCK_CHANNEL_123' : `UC_MOCK_CHANNEL_${channelNumber}_${Date.now().toString().slice(-4)}`;
+
+    const mockChannel = await prisma.youTubeAccount.create({
+      data: {
+        channelId: mockChannelId,
+        channelTitle,
+        channelDescription: `Sandbox YouTube channel #${channelNumber} for AI YouTube Video Automation Platform`,
+        avatarUrl: `https://images.unsplash.com/photo-${1618005182384 + (channelNumber * 100)}?w=150`,
+        accessToken: `mock_access_token_${channelNumber}`,
+        refreshToken: `mock_refresh_token_${channelNumber}`,
         isConnected: true,
       },
     });
