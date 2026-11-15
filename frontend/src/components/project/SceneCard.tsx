@@ -23,6 +23,16 @@ interface SceneCardProps {
   onGenerateVideo: () => Promise<void>;
 }
 
+const CAMERA_OPTIONS = [
+  { value: 'Auto (Cinematic Cycle)', label: 'Auto (5-Way Cycle)' },
+  { value: 'Zoom in', label: 'Zoom In (Ken Burns)' },
+  { value: 'Zoom out', label: 'Zoom Out (Ken Burns)' },
+  { value: 'Pan left to right', label: 'Pan Left to Right' },
+  { value: 'Pan right to left', label: 'Pan Right to Left' },
+  { value: 'Tilt up', label: 'Tilt Upward' },
+  { value: 'Tilt down', label: 'Tilt Downward' },
+];
+
 export const SceneCard: React.FC<SceneCardProps> = ({
   scene,
   onUpdate,
@@ -235,14 +245,22 @@ export const SceneCard: React.FC<SceneCardProps> = ({
             <div>
               <span className="text-slate-400 block mb-1">Camera Motion:</span>
               {isEditing ? (
-                <input
-                  type="text"
+                <select
                   value={camera}
                   onChange={(e) => setCamera(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded p-1.5 text-xs text-white"
-                />
+                >
+                  {camera && !CAMERA_OPTIONS.some((opt) => opt.value.toLowerCase() === camera.toLowerCase()) && (
+                    <option value={camera}>{camera} (Custom)</option>
+                  )}
+                  {CAMERA_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               ) : (
-                <span className="text-slate-300 font-medium">{scene.cameraMovement || 'Zoom in'}</span>
+                <span className="text-slate-300 font-medium">{scene.cameraMovement || 'Auto (5-Way Cycle)'}</span>
               )}
             </div>
 

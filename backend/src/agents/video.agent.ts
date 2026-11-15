@@ -79,7 +79,8 @@ export const videoAgent = {
           imagePath: localImagePath,
           durationSeconds: scene.duration || 5.0,
           aspectRatio,
-          cameraMovement: scene.cameraMovement || 'Zoom in slowly',
+          cameraMovement: scene.cameraMovement || undefined,
+          sceneIndex: (scene.sceneNumber || 1) - 1,
           outputPath,
         });
 

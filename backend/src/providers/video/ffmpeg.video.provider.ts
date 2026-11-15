@@ -2,6 +2,7 @@ import { VideoProvider, VideoGenerationOptions } from '../interfaces.js';
 import { ffmpeg } from '../../services/ffmpeg.service.js';
 import { logger } from '../../utils/logger.js';
 import { config } from '../../config/index.js';
+import { buildCameraMotionFilter } from '../../utils/motion.util.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -24,14 +25,24 @@ export class FFmpegVideoProvider implements VideoProvider {
       let cmd = ffmpeg();
 
       if (options.imagePath && fs.existsSync(options.imagePath)) {
-        // Apply Ken Burns dynamic zoom filter on image
-        // zoompan=z='min(zoom+0.0015,1.2)':d=totalFrames:s=WxH
+        // Apply 5-way dynamic camera motion filter on image
+        const { filter: motionFilter, motion } = buildCameraMotionFilter({
+          movement: options.cameraMovement,
+          sceneIndex: options.sceneIndex || 0,
+          totalFrames,
+          width,
+          height,
+          fps,
+        });
+
+        logger.info(`Applying 5-way camera motion [${motion}] (directive: "${options.cameraMovement || 'auto'}")`);
+
         cmd = cmd
           .input(options.imagePath)
           .loop(duration)
           .videoFilters([
             `scale=${width * 2}:${height * 2}`,
-            `zoompan=z='min(zoom+0.0015,1.25)':d=${totalFrames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=${width}x${height}:fps=${fps}`,
+            motionFilter,
             'format=yuv420p',
           ]);
       } else {

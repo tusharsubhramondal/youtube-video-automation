@@ -113,7 +113,7 @@ Return a valid JSON object matching this exact schema:
       "sceneNumber": number,
       "narrationText": string (exact spoken voiceover words),
       "visualPrompt": string (vivid text-to-image prompt tailored for ${params.visualStyle} style),
-      "cameraMovement": string (e.g., "Slow zoom in", "Pan right across landscape", "High angle aerial descent"),
+      "cameraMovement": string (cinematic camera motion, choose from: "Zoom in", "Zoom out", "Pan left to right", "Pan right to left", "Tilt up", "Tilt down"),
       "transition": string (e.g., "fade", "wipe", "cut"),
       "durationSeconds": number (estimated duration of this scene in seconds, e.g. 5)
     }

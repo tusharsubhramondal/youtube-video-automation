@@ -84,6 +84,7 @@ export interface VideoGenerationOptions {
   durationSeconds: number;
   aspectRatio: '16:9' | '9:16';
   cameraMovement?: string;
+  sceneIndex?: number;
   outputPath: string;
 }
 

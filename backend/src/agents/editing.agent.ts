@@ -4,6 +4,7 @@ import { config } from '../config/index.js';
 import { logger } from '../utils/logger.js';
 import { SubtitleService } from '../services/subtitle.service.js';
 import { getProjectStoragePath, getProjectAssetUrl, resolveAssetLocalPath } from '../utils/storage.util.js';
+import { buildCameraMotionFilter } from '../utils/motion.util.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -175,14 +176,24 @@ export const editingAgent = {
           const transitionFilter = `fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${fadeOutStart}:d=${fadeDuration}`;
 
           if (sourceFile && (sourceFile.endsWith('.png') || sourceFile.endsWith('.jpg') || sourceFile.endsWith('.jpeg'))) {
-            // Static image: create loop clip with motion zoom and scene transition
+            // Static image: create loop clip with 5-way dynamic camera motion and scene transition
             const totalFrames = Math.round(sceneDuration * fps);
+            const { filter: motionFilter, motion } = buildCameraMotionFilter({
+              movement: scene.cameraMovement || undefined,
+              sceneIndex: i,
+              totalFrames,
+              width,
+              height,
+              fps,
+            });
+            logger.info(`[EditingAgent] Scene ${scene.sceneNumber}: dynamic motion [${motion}] (directive: "${scene.cameraMovement || 'auto'}")`);
+
             cmd = cmd
               .input(sourceFile)
               .loop(sceneDuration)
               .videoFilters([
                 `scale=${width * 2}:${height * 2}`,
-                `zoompan=z='min(zoom+0.0015,1.25)':d=${totalFrames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=${width}x${height}:fps=${fps}`,
+                motionFilter,
                 transitionFilter,
                 'setsar=1',
                 `setdar=${isShorts ? '9/16' : '16/9'}`,
