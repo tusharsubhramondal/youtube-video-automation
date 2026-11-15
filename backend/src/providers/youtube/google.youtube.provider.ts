@@ -81,23 +81,30 @@ export class GoogleYouTubeProvider implements YouTubeProvider {
   }
 
   async handleOAuthCallback(code: string): Promise<any> {
-    const { tokens } = await this.oauth2Client.getToken(code);
-    this.oauth2Client.setCredentials(tokens);
+    try {
+      const { tokens } = await this.oauth2Client.getToken(code);
+      this.oauth2Client.setCredentials(tokens);
 
-    // Fetch channel profile
-    const youtube = google.youtube({ version: 'v3', auth: this.oauth2Client });
-    const response = await youtube.channels.list({
-      part: ['snippet'],
-      mine: true,
-    });
+      // Fetch channel profile
+      const youtube = google.youtube({ version: 'v3', auth: this.oauth2Client });
+      const response = await youtube.channels.list({
+        part: ['snippet'],
+        mine: true,
+      });
 
-    const channel = response.data.items?.[0];
-    return {
-      tokens,
-      channelId: channel?.id || 'unknown_channel',
-      channelTitle: channel?.snippet?.title || 'YouTube Channel',
-      avatarUrl: channel?.snippet?.thumbnails?.default?.url || null,
-    };
+      const channel = response.data.items?.[0];
+      return {
+        tokens,
+        channelId: channel?.id || 'unknown_channel',
+        channelTitle: channel?.snippet?.title || 'YouTube Channel',
+        avatarUrl: channel?.snippet?.thumbnails?.default?.url || null,
+      };
+    } catch (err: any) {
+      if (err.message?.includes('invalid_grant') || err.response?.data?.error === 'invalid_grant') {
+        throw new Error('Google authorization code has expired or was already used (invalid_grant). Please click "Connect Google Account" and authorize again.');
+      }
+      throw err;
+    }
   }
 
   async uploadVideo(params: YouTubeUploadParams): Promise<{
@@ -143,17 +150,41 @@ export class GoogleYouTubeProvider implements YouTubeProvider {
     try {
       res = await youtube.videos.insert(insertPayload());
     } catch (uploadErr: any) {
-      const isAuthError = uploadErr.status === 401 || uploadErr.code === 401 || uploadErr.message?.includes('Invalid Credentials');
+      const isAuthError = uploadErr.status === 401 || uploadErr.code === 401 || uploadErr.message?.includes('Invalid Credentials') || uploadErr.message?.includes('invalid_grant');
       if (isAuthError && params.tokens?.refresh_token) {
         logger.warn('[GoogleYouTubeProvider] Auth error encountered during upload. Refreshing token and retrying...');
-        const refreshed = await this.oauth2Client.refreshAccessToken();
-        if (refreshed.credentials) {
-          this.oauth2Client.setCredentials(refreshed.credentials);
-          res = await youtube.videos.insert(insertPayload());
-        } else {
-          throw uploadErr;
+        try {
+          const refreshed = await this.oauth2Client.refreshAccessToken();
+          if (refreshed.credentials) {
+            this.oauth2Client.setCredentials(refreshed.credentials);
+            res = await youtube.videos.insert(insertPayload());
+          } else {
+            throw uploadErr;
+          }
+        } catch (refreshErr: any) {
+          const isInvalidGrant = refreshErr.message?.includes('invalid_grant') || refreshErr.response?.data?.error === 'invalid_grant';
+          if (isInvalidGrant) {
+            if (this.accountId) {
+              await prisma.youTubeAccount.update({
+                where: { id: this.accountId },
+                data: { isConnected: false },
+              }).catch(() => {});
+            }
+            throw new Error('YouTube authorization expired (invalid_grant): Your Google OAuth session for this channel has expired or been revoked (Google Testing apps expire after 7 days). Please click "Connect Google Account" in YouTube Integration to reconnect.');
+          }
+          throw refreshErr;
         }
       } else {
+        const isInvalidGrant = uploadErr.message?.includes('invalid_grant') || uploadErr.response?.data?.error === 'invalid_grant';
+        if (isInvalidGrant) {
+          if (this.accountId) {
+            await prisma.youTubeAccount.update({
+              where: { id: this.accountId },
+              data: { isConnected: false },
+            }).catch(() => {});
+          }
+          throw new Error('YouTube authorization expired (invalid_grant): Your Google OAuth session for this channel has expired or been revoked (Google Testing apps expire after 7 days). Please click "Connect Google Account" in YouTube Integration to reconnect.');
+        }
         throw uploadErr;
       }
     }
@@ -244,12 +275,19 @@ export class GoogleYouTubeProvider implements YouTubeProvider {
       const isAuthError = err.status === 401 || err.code === 401 || err.message?.includes('Invalid Credentials');
       if (isAuthError && params.tokens?.refresh_token) {
         logger.warn('[GoogleYouTubeProvider] Auth error during caption upload. Refreshing token and retrying...');
-        const refreshed = await this.oauth2Client.refreshAccessToken();
-        if (refreshed.credentials) {
-          this.oauth2Client.setCredentials(refreshed.credentials);
-          res = await youtube.captions.insert(insertPayload());
-        } else {
-          throw err;
+        try {
+          const refreshed = await this.oauth2Client.refreshAccessToken();
+          if (refreshed.credentials) {
+            this.oauth2Client.setCredentials(refreshed.credentials);
+            res = await youtube.captions.insert(insertPayload());
+          } else {
+            throw err;
+          }
+        } catch (refreshErr: any) {
+          if (refreshErr.message?.includes('invalid_grant') || refreshErr.response?.data?.error === 'invalid_grant') {
+            throw new Error('YouTube authorization expired (invalid_grant): Please reconnect your channel in settings to renew authorization.');
+          }
+          throw refreshErr;
         }
       } else {
         throw err;

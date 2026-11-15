@@ -65,9 +65,21 @@ export const YouTubeIntegration: React.FC = () => {
   const [isSyncingSubtitles, setIsSyncingSubtitles] = useState(false);
   const [subtitleSyncSuccess, setSubtitleSyncSuccess] = useState<string | null>(null);
   const [publishedSuccess, setPublishedSuccess] = useState<any>(null);
+  const [oauthError, setOauthError] = useState<string | null>(null);
+  const [oauthSuccess, setOauthSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const err = params.get('error');
+    const conn = params.get('connected');
+    if (err) {
+      setOauthError(decodeURIComponent(err));
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (conn) {
+      setOauthSuccess('YouTube channel connected successfully!');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
     loadAccountsAndProjects();
   }, []);
 
@@ -235,6 +247,24 @@ export const YouTubeIntegration: React.FC = () => {
         </div>
       </div>
 
+      {/* OAuth Callback Alerts */}
+      {oauthError && (
+        <div className="p-4 bg-rose-950/40 border border-rose-800/60 rounded-xl flex items-start gap-3 text-xs text-rose-300">
+          <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <span className="font-bold text-rose-200 block">Google Authorization Notice:</span>
+            <p className="leading-relaxed">{oauthError}</p>
+          </div>
+        </div>
+      )}
+
+      {oauthSuccess && (
+        <div className="p-3 bg-emerald-950/40 border border-emerald-800/60 rounded-xl flex items-center gap-3 text-xs text-emerald-300">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{oauthSuccess}</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Connected Channels List */}
         <div className="space-y-4">
@@ -277,11 +307,24 @@ export const YouTubeIntegration: React.FC = () => {
                           {acc.channelTitle}
                         </h4>
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                          <span className={`w-1.5 h-1.5 rounded-full ${acc.isConnected ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`}></span>
                           <span className="text-[10px] text-slate-400 font-mono">
                             {acc.channelId}
                           </span>
+                          {!acc.isConnected && (
+                            <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1 py-0.5 rounded font-semibold">
+                              Expired
+                            </span>
+                          )}
                         </div>
+                        {!acc.isConnected && (
+                          <button
+                            onClick={isConfigured ? handleConnectOAuth : handleConnectMock}
+                            className="text-[10px] text-amber-400 hover:text-amber-300 underline font-medium block mt-1"
+                          >
+                            Session expired - Reconnect now
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -518,13 +561,40 @@ export const YouTubeIntegration: React.FC = () => {
                 </label>
               </div>
 
+              {/* Account Expiration Notice */}
+              {accounts.find((a) => a.id === (selectedAccountId || accounts[0]?.id)) &&
+                !accounts.find((a) => a.id === (selectedAccountId || accounts[0]?.id))?.isConnected && (
+                  <div className="p-3 bg-amber-950/40 border border-amber-800/60 rounded-xl space-y-2 text-xs">
+                    <div className="flex items-center gap-2 text-amber-300 font-bold">
+                      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span>Google Authorization Expired (invalid_grant)</span>
+                    </div>
+                    <p className="text-slate-300 text-[11px] leading-relaxed">
+                      Your authorization token for this channel has expired (Google Cloud apps in "Testing" mode expire after 7 days). Reconnect this channel to resume publishing.
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs border-amber-700/60 text-amber-300 hover:bg-amber-900/30"
+                      onClick={isConfigured ? handleConnectOAuth : handleConnectMock}
+                    >
+                      Reconnect Channel Now
+                    </Button>
+                  </div>
+                )}
+
               {/* Publish CTA Button */}
               <div className="pt-2">
                 <Button
                   size="lg"
                   variant="primary"
                   className="w-full"
-                  disabled={!userConfirmed || !selectedProject?.finalVideoUrl || accounts.length === 0}
+                  disabled={
+                    !userConfirmed ||
+                    !selectedProject?.finalVideoUrl ||
+                    accounts.length === 0 ||
+                    !accounts.find((a) => a.id === (selectedAccountId || accounts[0]?.id))?.isConnected
+                  }
                   isLoading={isPublishing}
                   icon={<Share2 className="w-4 h-4" />}
                   onClick={handlePublish}
