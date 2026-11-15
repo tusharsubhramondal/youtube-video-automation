@@ -10,6 +10,8 @@ import {
   Globe,
   Eye,
   ShieldCheck,
+  FileText,
+  RefreshCw,
 } from 'lucide-react';
 import { youtubeService, projectService } from '../services/api';
 import { YouTubeAccount, VideoProject } from '../types';
@@ -56,8 +58,11 @@ export const YouTubeIntegration: React.FC = () => {
   const [selectedProject, setSelectedProject] = useState<VideoProject | null>(null);
   const [privacyStatus, setPrivacyStatus] = useState<'PRIVATE' | 'UNLISTED' | 'PUBLIC'>('PRIVATE');
   const [categoryId, setCategoryId] = useState<string>('28');
+  const [uploadSubtitles, setUploadSubtitles] = useState(true);
   const [userConfirmed, setUserConfirmed] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isSyncingSubtitles, setIsSyncingSubtitles] = useState(false);
+  const [subtitleSyncSuccess, setSubtitleSyncSuccess] = useState<string | null>(null);
   const [publishedSuccess, setPublishedSuccess] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -145,6 +150,7 @@ export const YouTubeIntegration: React.FC = () => {
     }
 
     setIsPublishing(true);
+    setSubtitleSyncSuccess(null);
     try {
       const result = await youtubeService.publishVideo(selectedProject.id, {
         youtubeAccountId: accounts[0]?.id,
@@ -153,6 +159,7 @@ export const YouTubeIntegration: React.FC = () => {
         tags: selectedProject.seoTags || undefined,
         categoryId,
         privacyStatus,
+        uploadSubtitles,
         userApproved: true,
       });
 
@@ -163,6 +170,21 @@ export const YouTubeIntegration: React.FC = () => {
       alert(err.response?.data?.error?.message || err.message || 'Failed to publish video');
     } finally {
       setIsPublishing(false);
+    }
+  };
+
+  const handleSyncSubtitles = async () => {
+    if (!selectedProject) return;
+    setIsSyncingSubtitles(true);
+    setSubtitleSyncSuccess(null);
+    try {
+      const res = await youtubeService.syncSubtitles(selectedProject.id, accounts[0]?.id);
+      setSubtitleSyncSuccess(`Subtitles successfully uploaded & attached to YouTube! Track: ${res.language.toUpperCase()} (${res.name})`);
+    } catch (err: any) {
+      console.error('Subtitle sync error:', err);
+      alert(err.response?.data?.error?.message || err.message || 'Failed to sync subtitles to YouTube');
+    } finally {
+      setIsSyncingSubtitles(false);
     }
   };
 
@@ -330,6 +352,31 @@ export const YouTubeIntegration: React.FC = () => {
                       ? '✓ Meets Shorts criteria (≤60s, 9:16 aspect ratio). YouTube will automatically place this in your channel\'s Shorts tab and the mobile Shorts algorithm.'
                       : '✓ Published to your channel\'s standard landscape Videos tab with custom thumbnail.'}
                   </p>
+
+                  {selectedProject.status === 'PUBLISHED' && (
+                    <div className="pt-2.5 mt-1 border-t border-slate-800/80 flex items-center justify-between">
+                      <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Published to YouTube
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        isLoading={isSyncingSubtitles}
+                        icon={<RefreshCw className="w-3 h-3 text-indigo-400" />}
+                        onClick={handleSyncSubtitles}
+                        title="Upload or update closed captions (.srt) directly on YouTube"
+                      >
+                        Sync Captions (CC)
+                      </Button>
+                    </div>
+                  )}
+
+                  {subtitleSyncSuccess && (
+                    <div className="p-2 bg-indigo-950/40 border border-indigo-800/40 rounded text-[11px] text-indigo-300 flex items-center gap-2 mt-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span>{subtitleSyncSuccess}</span>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -376,6 +423,27 @@ export const YouTubeIntegration: React.FC = () => {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Subtitle / Closed Caption (CC) Option */}
+              <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={uploadSubtitles}
+                    onChange={(e) => setUploadSubtitles(e.target.checked)}
+                    className="w-4 h-4 mt-0.5 accent-brand-500 rounded cursor-pointer"
+                  />
+                  <div className="text-xs">
+                    <span className="font-semibold text-slate-200 flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-indigo-400" />
+                      Automated Subtitle (Closed Captions) Upload
+                    </span>
+                    <span className="text-slate-400 text-[11px] block mt-0.5 leading-relaxed">
+                      Uploads synchronized closed captions (.srt) directly to YouTube's caption engine. Boosts search ranking (SEO) by indexing every spoken word, allows viewers to toggle subtitles, and enables auto-translation into 100+ languages.
+                    </span>
+                  </div>
+                </label>
               </div>
 
               {/* Explicit User Approval Checkbox */}
@@ -434,6 +502,15 @@ export const YouTubeIntegration: React.FC = () => {
                 <ExternalLink className="w-3.5 h-3.5" />
                 {publishedSuccess.youtubeUrl}
               </a>
+
+              {publishedSuccess.captionTrack && (
+                <div className="flex items-center gap-2 p-2.5 bg-indigo-950/40 border border-indigo-800/40 rounded-lg text-xs text-indigo-300">
+                  <FileText className="w-4 h-4 text-indigo-400 shrink-0" />
+                  <span>
+                    <strong>Closed Captions (CC) Attached:</strong> [{publishedSuccess.captionTrack.language.toUpperCase()}] {publishedSuccess.captionTrack.name}
+                  </span>
+                </div>
+              )}
             </Card>
           )}
         </div>

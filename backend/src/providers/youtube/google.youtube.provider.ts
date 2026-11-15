@@ -1,6 +1,6 @@
 import { google } from 'googleapis';
 import fs from 'fs';
-import { YouTubeProvider, YouTubeUploadParams } from '../interfaces.js';
+import { YouTubeProvider, YouTubeUploadParams, CaptionUploadParams, CaptionUploadResult } from '../interfaces.js';
 import { config } from '../../config/index.js';
 import { logger } from '../../utils/logger.js';
 import { prisma } from '../../services/prisma.service.js';
@@ -66,6 +66,7 @@ export class GoogleYouTubeProvider implements YouTubeProvider {
   getAuthUrl(): string {
     const scopes = [
       'https://www.googleapis.com/auth/youtube.upload',
+      'https://www.googleapis.com/auth/youtube.force-ssl',
       'https://www.googleapis.com/auth/youtube.readonly',
       'https://www.googleapis.com/auth/userinfo.profile',
     ];
@@ -101,6 +102,7 @@ export class GoogleYouTubeProvider implements YouTubeProvider {
     videoId: string;
     url: string;
     publishedAt: Date;
+    captionTrack?: CaptionUploadResult;
   }> {
     if (!fs.existsSync(params.videoFilePath)) {
       throw new Error(`Video file does not exist at: ${params.videoFilePath}`);
@@ -172,10 +174,94 @@ export class GoogleYouTubeProvider implements YouTubeProvider {
       }
     }
 
+    // Automated Subtitle / Closed Caption Upload
+    let captionTrack: CaptionUploadResult | undefined;
+    if (params.subtitlePath && fs.existsSync(params.subtitlePath)) {
+      try {
+        captionTrack = await this.uploadCaptions({
+          videoId,
+          subtitlePath: params.subtitlePath,
+          language: params.subtitleLanguage || 'en',
+          trackName: params.subtitleTrackName || 'Official Subtitles',
+          tokens: params.tokens,
+        });
+        logger.info(`[GoogleYouTubeProvider] Automated subtitle track uploaded successfully for YouTube video ${videoId}`);
+      } catch (captionErr: any) {
+        const isPermissionErr = captionErr.status === 403 || captionErr.code === 403 || captionErr.message?.includes('insufficient');
+        if (isPermissionErr) {
+          logger.warn(`[GoogleYouTubeProvider] Subtitle upload requires 'youtube.force-ssl' OAuth permission. Reconnecting your YouTube channel in settings will enable automated closed caption uploads.`);
+        } else {
+          logger.warn(`[GoogleYouTubeProvider] Non-fatal subtitle upload issue for video ${videoId}: ${captionErr.message}`);
+        }
+      }
+    }
+
     return {
       videoId,
       url: `https://www.youtube.com/watch?v=${videoId}`,
       publishedAt: new Date(),
+      captionTrack,
+    };
+  }
+
+  async uploadCaptions(params: CaptionUploadParams): Promise<CaptionUploadResult> {
+    if (!fs.existsSync(params.subtitlePath)) {
+      throw new Error(`Subtitle file does not exist at: ${params.subtitlePath}`);
+    }
+
+    if (params.tokens) {
+      this.setCredentials(params.tokens);
+    }
+
+    await this.ensureValidToken();
+
+    const youtube = google.youtube({ version: 'v3', auth: this.oauth2Client });
+
+    logger.info(`[GoogleYouTubeProvider] Uploading closed caption track [${params.language} - ${params.trackName || 'Official Subtitles'}] for video ${params.videoId}`);
+
+    const insertPayload = () => ({
+      part: ['snippet'],
+      requestBody: {
+        snippet: {
+          videoId: params.videoId,
+          language: params.language,
+          name: params.trackName || 'Official Subtitles',
+          isDraft: false,
+        },
+      },
+      media: {
+        mimeType: '*/*',
+        body: fs.createReadStream(params.subtitlePath),
+      },
+    });
+
+    let res: any;
+    try {
+      res = await youtube.captions.insert(insertPayload());
+    } catch (err: any) {
+      const isAuthError = err.status === 401 || err.code === 401 || err.message?.includes('Invalid Credentials');
+      if (isAuthError && params.tokens?.refresh_token) {
+        logger.warn('[GoogleYouTubeProvider] Auth error during caption upload. Refreshing token and retrying...');
+        const refreshed = await this.oauth2Client.refreshAccessToken();
+        if (refreshed.credentials) {
+          this.oauth2Client.setCredentials(refreshed.credentials);
+          res = await youtube.captions.insert(insertPayload());
+        } else {
+          throw err;
+        }
+      } else {
+        throw err;
+      }
+    }
+
+    const captionId = res.data.id!;
+    logger.info(`[GoogleYouTubeProvider] Closed caption track uploaded successfully! Caption ID: ${captionId}`);
+
+    return {
+      captionId,
+      videoId: params.videoId,
+      language: params.language,
+      name: params.trackName || 'Official Subtitles',
     };
   }
 }

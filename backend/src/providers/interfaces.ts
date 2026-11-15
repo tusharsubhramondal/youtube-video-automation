@@ -121,10 +121,31 @@ export interface YouTubeUploadParams {
   categoryId: string;
   privacyStatus: 'private' | 'unlisted' | 'public';
   thumbnailPath?: string;
+  subtitlePath?: string;
+  subtitleLanguage?: string;
+  subtitleTrackName?: string;
   tokens?: {
     access_token?: string;
     refresh_token?: string | null;
   };
+}
+
+export interface CaptionUploadParams {
+  videoId: string;
+  subtitlePath: string;
+  language: string;
+  trackName?: string;
+  tokens?: {
+    access_token?: string;
+    refresh_token?: string | null;
+  };
+}
+
+export interface CaptionUploadResult {
+  captionId: string;
+  videoId: string;
+  language: string;
+  name: string;
 }
 
 export interface YouTubeProvider {
@@ -136,6 +157,8 @@ export interface YouTubeProvider {
     videoId: string;
     url: string;
     publishedAt: Date;
+    captionTrack?: CaptionUploadResult;
   }>;
+  uploadCaptions?(params: CaptionUploadParams): Promise<CaptionUploadResult>;
 }
 

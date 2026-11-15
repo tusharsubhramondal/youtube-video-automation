@@ -191,9 +191,19 @@ export const youtubeService = {
     tags?: string;
     categoryId?: string;
     privacyStatus: 'PRIVATE' | 'UNLISTED' | 'PUBLIC';
+    uploadSubtitles?: boolean;
     userApproved: boolean;
-  }): Promise<PublishedVideo> => {
+  }): Promise<PublishedVideo & { captionTrack?: { captionId: string; language: string; name: string } }> => {
     const res = await api.post(`/youtube/publish/${projectId}`, payload);
+    return res.data.data;
+  },
+  syncSubtitles: async (projectId: string, youtubeAccountId?: string): Promise<{
+    captionId: string;
+    videoId: string;
+    language: string;
+    name: string;
+  }> => {
+    const res = await api.post(`/youtube/captions/${projectId}`, { youtubeAccountId });
     return res.data.data;
   },
 };

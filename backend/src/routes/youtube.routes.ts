@@ -94,6 +94,7 @@ router.post('/publish/:projectId', async (req: Request, res: Response, next: Nex
       tags,
       categoryId,
       privacyStatus,
+      uploadSubtitles,
       userApproved, // Must be true!
     } = req.body;
 
@@ -112,10 +113,28 @@ router.post('/publish/:projectId', async (req: Request, res: Response, next: Nex
       tags,
       categoryId: categoryId || '22',
       privacyStatus: privacyStatus || 'PRIVATE',
+      uploadSubtitles: uploadSubtitles !== false,
       userApproved: true,
     });
 
     res.json({ success: true, data: publishResult });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Upload / Sync Subtitles to an already published YouTube video
+router.post('/captions/:projectId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { projectId } = req.params;
+    const { youtubeAccountId } = req.body;
+
+    const captionResult = await publishingAgent.uploadSubtitles({
+      projectId,
+      youtubeAccountId,
+    });
+
+    res.json({ success: true, data: captionResult });
   } catch (error) {
     next(error);
   }
