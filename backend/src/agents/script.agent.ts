@@ -65,7 +65,7 @@ export const scriptAgent = {
             sceneNumber: scene.sceneNumber,
             narrationText: scene.narrationText,
             visualPrompt: scene.visualPrompt,
-            cameraMovement: scene.cameraMovement || 'Zoom in slowly',
+            cameraMovement: scene.cameraMovement || (project.visualStyle?.includes('Parallax') ? 'Auto (2.5D Parallax Cycle)' : 'Auto (Cinematic Cycle)'),
             transition: scene.transition || 'fade',
             duration: scene.durationSeconds || 5.0,
             status: 'PENDING',

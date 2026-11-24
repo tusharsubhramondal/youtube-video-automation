@@ -36,6 +36,8 @@ export const editingAgent = {
       },
     });
 
+    const tempFilesToClean: string[] = [];
+
     try {
       const project = await prisma.videoProject.findUnique({
         where: { id: projectId },
@@ -157,6 +159,7 @@ export const editingAgent = {
         const scene = project.scenes[i];
         const sceneDuration = scene.duration || 5.0;
         const normClipPath = path.join(config.storage.tempDir, `norm_${project.id}_s${scene.sceneNumber}_${Date.now()}.mp4`);
+        tempFilesToClean.push(normClipPath);
 
         let sourceFile: string | null = null;
         if (scene.videoUrl) {
@@ -176,7 +179,7 @@ export const editingAgent = {
           const transitionFilter = `fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${fadeOutStart}:d=${fadeDuration}`;
 
           if (sourceFile && (sourceFile.endsWith('.png') || sourceFile.endsWith('.jpg') || sourceFile.endsWith('.jpeg'))) {
-            // Static image: create loop clip with 5-way dynamic camera motion and scene transition
+            // Static image: create loop clip with 2.5D Parallax / dynamic camera motion and scene transition
             const totalFrames = Math.round(sceneDuration * fps);
             const { filter: motionFilter, motion } = buildCameraMotionFilter({
               movement: scene.cameraMovement || undefined,
@@ -186,7 +189,7 @@ export const editingAgent = {
               height,
               fps,
             });
-            logger.info(`[EditingAgent] Scene ${scene.sceneNumber}: dynamic motion [${motion}] (directive: "${scene.cameraMovement || 'auto'}")`);
+            logger.info(`[EditingAgent] Scene ${scene.sceneNumber}: motion / parallax [${motion}] (directive: "${scene.cameraMovement || 'auto'}")`);
 
             cmd = cmd
               .input(sourceFile)
@@ -241,6 +244,7 @@ export const editingAgent = {
 
       // Concat list for standardized clips
       const concatListPath = path.join(config.storage.tempDir, `concat_${project.id}_${Date.now()}.txt`);
+      tempFilesToClean.push(concatListPath);
       const concatContent = standardizedClipPaths.map((p) => `file '${p.replace(/\\/g, '/')}'`).join('\n');
       fs.writeFileSync(concatListPath, concatContent);
 
@@ -249,6 +253,7 @@ export const editingAgent = {
       // -------------------------------------------------------------
       logger.info('[EditingAgent] Step 3/4: Compiling narration audio and mixing background music...');
       const unifiedAudioPath = path.join(config.storage.tempDir, `audio_${project.id}_${Date.now()}.mp3`);
+      tempFilesToClean.push(unifiedAudioPath);
 
       // Collect audio clips for each scene
       const sceneAudioSegments: string[] = [];
@@ -260,6 +265,7 @@ export const editingAgent = {
         }
 
         const segmentPath = path.join(config.storage.tempDir, `seg_${project.id}_s${scene.sceneNumber}_${Date.now()}.mp3`);
+        tempFilesToClean.push(segmentPath);
         await new Promise<void>((resolve, reject) => {
           let cmd = ffmpeg();
           const targetDur = scene.duration || 5.0;
@@ -286,6 +292,7 @@ export const editingAgent = {
 
       // Concat voiceover segments
       const audioConcatListPath = path.join(config.storage.tempDir, `audio_concat_${project.id}_${Date.now()}.txt`);
+      tempFilesToClean.push(audioConcatListPath);
       fs.writeFileSync(audioConcatListPath, sceneAudioSegments.map((p) => `file '${p.replace(/\\/g, '/')}'`).join('\n'));
 
       await new Promise<void>((resolve, reject) => {
@@ -452,6 +459,25 @@ export const editingAgent = {
         },
       });
       throw err;
+    } finally {
+      // Auto-clean all temporary FFmpeg clips, audio segments, and concat lists created during this render
+      let cleanedCount = 0;
+      let freedBytes = 0;
+      for (const tempFile of tempFilesToClean) {
+        try {
+          if (fs.existsSync(tempFile)) {
+            const stat = fs.statSync(tempFile);
+            freedBytes += stat.size;
+            fs.unlinkSync(tempFile);
+            cleanedCount++;
+          }
+        } catch (cleanupErr: any) {
+          logger.warn(`[EditingAgent] Could not delete temp file ${path.basename(tempFile)}: ${cleanupErr.message}`);
+        }
+      }
+      if (cleanedCount > 0) {
+        logger.info(`[EditingAgent] Auto-cleaned ${cleanedCount} temp file(s) (${(freedBytes / (1024 * 1024)).toFixed(2)} MB freed).`);
+      }
     }
   },
 };

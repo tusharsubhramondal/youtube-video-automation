@@ -24,7 +24,12 @@ interface SceneCardProps {
 }
 
 const CAMERA_OPTIONS = [
-  { value: 'Auto (Cinematic Cycle)', label: 'Auto (5-Way Cycle)' },
+  { value: 'Auto (Cinematic Cycle)', label: 'Auto (5-Way Classic Cycle)' },
+  { value: 'Auto (2.5D Parallax Cycle)', label: 'Auto (2.5D Parallax Cycle)' },
+  { value: '2.5D Parallax (Cinematic Depth)', label: '2.5D Parallax (Cinematic Depth)' },
+  { value: '2.5D Parallax (Fire Embers)', label: '2.5D Parallax (Fire Embers)' },
+  { value: '2.5D Parallax (Rain Atmosphere)', label: '2.5D Parallax (Rain Atmosphere)' },
+  { value: '2.5D Parallax (Cosmic Dust)', label: '2.5D Parallax (Cosmic Dust)' },
   { value: 'Zoom in', label: 'Zoom In (Ken Burns)' },
   { value: 'Zoom out', label: 'Zoom Out (Ken Burns)' },
   { value: 'Pan left to right', label: 'Pan Left to Right' },

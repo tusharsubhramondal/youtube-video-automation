@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { LLMProvider, ResearchResult, ScriptResult } from '../interfaces.js';
 import { logger } from '../../utils/logger.js';
+import { safeParseJson } from '../../utils/json.util.js';
 
 export class OpenAIProvider implements LLMProvider {
   name = 'OpenAI';
@@ -73,7 +74,7 @@ Return a valid JSON object matching this schema:
 }`;
 
     const rawText = await this.executeChatCompletion(systemPrompt, userPrompt);
-    return JSON.parse(this.cleanJson(rawText)) as ResearchResult;
+    return safeParseJson<ResearchResult>(rawText);
   }
 
   async generateScript(params: {
@@ -113,7 +114,7 @@ Return a valid JSON object matching this exact schema:
       "sceneNumber": number,
       "narrationText": string (exact spoken voiceover words),
       "visualPrompt": string (vivid text-to-image prompt tailored for ${params.visualStyle} style),
-      "cameraMovement": string (cinematic camera motion, choose from: "Zoom in", "Zoom out", "Pan left to right", "Pan right to left", "Tilt up", "Tilt down"),
+      "cameraMovement": string (cinematic camera motion, choose from: "2.5D Parallax (Cinematic Depth)", "2.5D Parallax (Fire Embers)", "2.5D Parallax (Rain Atmosphere)", "2.5D Parallax (Cosmic Dust)", "Zoom in", "Zoom out", "Pan left to right", "Pan right to left", "Tilt up", "Tilt down"),
       "transition": string (e.g., "fade", "wipe", "cut"),
       "durationSeconds": number (estimated duration of this scene in seconds, e.g. 5)
     }
@@ -123,7 +124,7 @@ Return a valid JSON object matching this exact schema:
 }`;
 
     const rawText = await this.executeChatCompletion(systemPrompt, userPrompt);
-    return JSON.parse(this.cleanJson(rawText)) as ScriptResult;
+    return safeParseJson<ScriptResult>(rawText);
   }
 
   async generateSeoMetadata(params: {
@@ -154,7 +155,7 @@ Return valid JSON with:
 }`;
 
     const rawText = await this.executeChatCompletion(systemPrompt, userPrompt);
-    return JSON.parse(this.cleanJson(rawText));
+    return safeParseJson(rawText);
   }
 
   async generateThumbnailPrompt(topic: string, visualStyle: string): Promise<{
@@ -175,7 +176,7 @@ Return valid JSON:
 }`;
 
     const rawText = await this.executeChatCompletion(systemPrompt, userPrompt);
-    return JSON.parse(this.cleanJson(rawText));
+    return safeParseJson(rawText);
   }
 
   async generateText(prompt: string, systemPrompt = 'You are a viral content strategist. Always respond strictly in valid JSON.'): Promise<string> {

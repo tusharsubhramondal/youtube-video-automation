@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { LLMProvider, ResearchResult, ScriptResult } from '../interfaces.js';
 import { logger } from '../../utils/logger.js';
+import { safeParseJson } from '../../utils/json.util.js';
 
 export class GeminiProvider implements LLMProvider {
   name = 'Google Gemini';
@@ -28,28 +29,49 @@ export class GeminiProvider implements LLMProvider {
     const candidateModels = Array.from(
       new Set([
         this.sanitizeModelName(this.modelName),
+        'gemini-flash-lite-latest',
         'gemini-flash-latest',
-        'gemini-3.5-flash-lite',
-        'gemini-3.8-flash',
       ])
     ).filter(Boolean);
 
     let lastError: any = null;
 
     for (const model of candidateModels) {
-      try {
-        const generativeModel = this.genAI.getGenerativeModel({
-          model,
-          generationConfig: { responseMimeType: 'application/json' },
-        });
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          if (attempt > 1) {
+            await new Promise((r) => setTimeout(r, 1500 * attempt));
+          }
 
-        const response = await generativeModel.generateContent(prompt);
-        const rawText = response.response.text();
-        this.modelName = model; // Cache working model for subsequent agent calls
-        return rawText;
-      } catch (err: any) {
-        lastError = err;
-        logger.warn(`Gemini model "${model}" failed (${err.message?.substring(0, 80)}). Trying fallback model...`);
+          const generativeModel = this.genAI.getGenerativeModel({
+            model,
+            generationConfig: { responseMimeType: 'application/json' },
+          });
+
+          const response = await generativeModel.generateContent(prompt);
+          const rawText = response.response.text();
+          this.modelName = model; // Cache working model for subsequent agent calls
+          return rawText;
+        } catch (err: any) {
+          lastError = err;
+          const isHighDemand =
+            err.message?.includes('503') ||
+            err.status === 503 ||
+            err.message?.includes('high demand') ||
+            err.message?.includes('Service Unavailable');
+
+          if (isHighDemand && attempt < 3) {
+            logger.warn(
+              `Gemini model "${model}" high demand (attempt ${attempt}/3). Retrying in ${1.5 * attempt}s...`
+            );
+            continue;
+          }
+
+          logger.warn(
+            `Gemini model "${model}" failed (${err.message?.substring(0, 80)}). Trying fallback...`
+          );
+          break;
+        }
       }
     }
 
@@ -58,13 +80,20 @@ export class GeminiProvider implements LLMProvider {
 
   async generateResearch(topic: string, category: string, language: string): Promise<ResearchResult> {
     try {
+      const isBengali = language?.toLowerCase().includes('bengali') || language === 'bn' || language === 'বাংলা';
       const prompt = `You are an expert YouTube Content Strategist and Research Agent.
 Conduct comprehensive research for a high-performing YouTube video on the following topic:
 Topic: "${topic}"
 Category: "${category}"
 Language: "${language}"
 
-Return a valid JSON object matching this schema:
+CRITICAL JSON RULES:
+- Output MUST be strictly valid JSON.
+- Every string value and every item inside string arrays (keywords, points, hooks) MUST be enclosed in standard double quotes ("...").
+- Do NOT use unescaped double quotes inside values.
+${isBengali ? '- "angle", "targetAudience", "contentOutline", and "hooks" MUST be written in natural, fluent BENGALI script (বাংলায়).' : ''}
+
+Schema:
 {
   "topic": string,
   "angle": string (the unique hook/angle for viral appeal),
@@ -80,7 +109,7 @@ Return a valid JSON object matching this schema:
 }`;
 
       const rawText = await this.executeWithModelFallback(prompt);
-      return JSON.parse(this.cleanJson(rawText)) as ResearchResult;
+      return safeParseJson<ResearchResult>(rawText);
     } catch (err) {
       logger.error('Gemini generateResearch error:', err);
       throw err;
@@ -137,7 +166,7 @@ Return a valid JSON object matching this exact schema:
       "sceneNumber": number,
       "narrationText": string (exact spoken voiceover words in the requested language),
       "visualPrompt": string (vivid text-to-image prompt in ENGLISH tailored for ${params.visualStyle} style),
-      "cameraMovement": string (cinematic camera motion, choose from: "Zoom in", "Zoom out", "Pan left to right", "Pan right to left", "Tilt up", "Tilt down"),
+      "cameraMovement": string (cinematic camera motion, choose from: "2.5D Parallax (Cinematic Depth)", "2.5D Parallax (Fire Embers)", "2.5D Parallax (Rain Atmosphere)", "2.5D Parallax (Cosmic Dust)", "Zoom in", "Zoom out", "Pan left to right", "Pan right to left", "Tilt up", "Tilt down"),
       "transition": string (e.g., "fade", "wipe", "cut"),
       "durationSeconds": number (estimated duration of this scene in seconds, e.g. 5)
     }
@@ -147,7 +176,7 @@ Return a valid JSON object matching this exact schema:
 }`;
 
       const rawText = await this.executeWithModelFallback(prompt);
-      return JSON.parse(this.cleanJson(rawText)) as ScriptResult;
+      return safeParseJson<ScriptResult>(rawText);
     } catch (err) {
       logger.error('Gemini generateScript error:', err);
       throw err;
@@ -230,7 +259,7 @@ Return valid JSON with:
 }`;
 
       const rawText = await this.executeWithModelFallback(prompt);
-      return JSON.parse(this.cleanJson(rawText));
+      return safeParseJson(rawText);
     } catch (err) {
       logger.error('Gemini generateSeoMetadata error:', err);
       throw err;
@@ -256,7 +285,7 @@ Return valid JSON:
 }`;
 
       const rawText = await this.executeWithModelFallback(prompt);
-      return JSON.parse(this.cleanJson(rawText));
+      return safeParseJson(rawText);
     } catch (err) {
       logger.error('Gemini generateThumbnailPrompt error:', err);
       throw err;

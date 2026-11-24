@@ -92,6 +92,7 @@ export const CreateProject: React.FC = () => {
   ];
 
   const visualStyles = [
+    { id: '2.5D Parallax', label: '2.5D Depth Parallax', desc: 'Cinematic multiplane depth, drift & atmospheric particles' },
     { id: 'Cinematic', label: 'Cinematic Movie', desc: 'Volumetric lighting, 35mm film look' },
     { id: 'Photorealistic', label: 'Photorealistic 8K', desc: 'Real-world photography details' },
     { id: 'Cyberpunk', label: 'Cyberpunk & Sci-Fi', desc: 'Neon glows, holographic tech' },

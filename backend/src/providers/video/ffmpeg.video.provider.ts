@@ -25,7 +25,7 @@ export class FFmpegVideoProvider implements VideoProvider {
       let cmd = ffmpeg();
 
       if (options.imagePath && fs.existsSync(options.imagePath)) {
-        // Apply 5-way dynamic camera motion filter on image
+        // Apply 2.5D Parallax or dynamic camera motion filter on image
         const { filter: motionFilter, motion } = buildCameraMotionFilter({
           movement: options.cameraMovement,
           sceneIndex: options.sceneIndex || 0,
@@ -35,7 +35,7 @@ export class FFmpegVideoProvider implements VideoProvider {
           fps,
         });
 
-        logger.info(`Applying 5-way camera motion [${motion}] (directive: "${options.cameraMovement || 'auto'}")`);
+        logger.info(`Applying camera motion / parallax [${motion}] (directive: "${options.cameraMovement || 'auto'}")`);
 
         cmd = cmd
           .input(options.imagePath)
