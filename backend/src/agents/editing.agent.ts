@@ -65,7 +65,7 @@ export const editingAgent = {
       for (const scene of project.scenes) {
         if (scene.audioUrl) {
           const audioPath = resolveAssetLocalPath(scene.audioUrl);
-          if (audioPath && fs.existsSync(audioPath)) {
+          if (audioPath && fs.existsSync(audioPath) && fs.statSync(audioPath).size > 500) {
             try {
               const audioDur: number = await new Promise((res, rej) => {
                 ffmpeg.ffprobe(audioPath, (err, metadata) => {
@@ -261,7 +261,9 @@ export const editingAgent = {
         let audioFile: string | null = null;
         if (scene.audioUrl) {
           const resolved = resolveAssetLocalPath(scene.audioUrl);
-          if (resolved) audioFile = resolved;
+          if (resolved && fs.existsSync(resolved) && fs.statSync(resolved).size > 500) {
+            audioFile = resolved;
+          }
         }
 
         const segmentPath = path.join(config.storage.tempDir, `seg_${project.id}_s${scene.sceneNumber}_${Date.now()}.mp3`);
@@ -275,6 +277,7 @@ export const editingAgent = {
               .input(audioFile)
               .audioFilters(['apad']);
           } else {
+            logger.warn(`[EditingAgent] Scene ${scene.sceneNumber} audio missing or empty (0 bytes). Generating ${targetDur}s silence track.`);
             cmd = cmd.input(`aevalsrc=0:d=${targetDur}`).inputFormat('lavfi');
           }
 

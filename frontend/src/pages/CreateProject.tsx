@@ -216,11 +216,20 @@ export const CreateProject: React.FC = () => {
                     setLanguage(newLang);
                     if (newLang === 'Bengali') {
                       const bnVoice = voices.find((v) => v.language === 'bn-IN' || v.name.includes('Bashkar'));
-                      if (bnVoice) {
-                        setVoiceStyle(bnVoice.name);
-                      } else {
-                        setVoiceStyle('Deep Storyteller (Bashkar - বাংলা)');
-                      }
+                      setVoiceStyle(bnVoice ? bnVoice.name : 'Deep Storyteller (Bashkar - বাংলা)');
+                    } else if (newLang === 'Hindi') {
+                      const hiVoice = voices.find((v) => v.language === 'hi-IN' || v.name.includes('Madhur'));
+                      setVoiceStyle(hiVoice ? hiVoice.name : 'hi-IN-MadhurNeural');
+                    } else if (newLang === 'Spanish') {
+                      setVoiceStyle('es-ES-AlvaroNeural');
+                    } else if (newLang === 'French') {
+                      setVoiceStyle('fr-FR-HenriNeural');
+                    } else if (newLang === 'German') {
+                      setVoiceStyle('de-DE-ConradNeural');
+                    } else if (newLang === 'Japanese') {
+                      setVoiceStyle('ja-JP-KeitaNeural');
+                    } else {
+                      setVoiceStyle('Deep Narration');
                     }
                   }}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:ring-2 focus:ring-brand-500"

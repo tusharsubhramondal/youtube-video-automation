@@ -71,6 +71,11 @@ export class EdgeTTSProvider implements TTSProvider {
       const { audioStream } = tts.toStream(options.text);
       const fileStream = fs.createWriteStream(options.outputPath);
 
+      let bytesReceived = 0;
+      audioStream.on('data', (chunk) => {
+        bytesReceived += chunk.length;
+      });
+
       await new Promise<void>((resolve, reject) => {
         audioStream.pipe(fileStream);
         fileStream.on('finish', () => resolve());
@@ -84,10 +89,18 @@ export class EdgeTTSProvider implements TTSProvider {
         });
       });
 
+      // Strict validation: Verify non-empty audio file
+      if (!fs.existsSync(options.outputPath) || fs.statSync(options.outputPath).size < 200 || bytesReceived === 0) {
+        if (fs.existsSync(options.outputPath)) {
+          try { fs.unlinkSync(options.outputPath); } catch (_) {}
+        }
+        throw new Error(`Edge TTS produced an empty or invalid audio stream (0 bytes received) with voice "${voiceId}".`);
+      }
+
       const duration = await this.getAudioDuration(options.outputPath, options.text);
       const relPath = path.relative(config.storage.uploadDir, options.outputPath).replace(/\\/g, '/');
 
-      logger.info(`[EdgeTTS] Successfully synthesized ${duration.toFixed(2)}s audio: ${relPath}`);
+      logger.info(`[EdgeTTS] Successfully synthesized ${duration.toFixed(2)}s audio (${bytesReceived} bytes): ${relPath}`);
 
       return {
         url: `/uploads/${relPath}`,
@@ -101,14 +114,75 @@ export class EdgeTTSProvider implements TTSProvider {
   }
 
   private resolveVoiceId(voiceStyle?: string, language?: string): string {
-    const isBengaliLang = language?.toLowerCase().includes('bengali') || language === 'bn' || language === 'bn-IN' || language === 'বাংলা';
+    const lang = (language || '').toLowerCase().trim();
+    const isHindi = lang.includes('hindi') || lang === 'hi' || lang === 'hi-in' || lang === 'हिंदी';
+    const isBengali = lang.includes('bengali') || lang === 'bn' || lang === 'bn-in' || lang === 'বাংলা';
+    const isSpanish = lang.includes('spanish') || lang === 'es' || lang === 'es-es';
+    const isFrench = lang.includes('french') || lang === 'fr' || lang === 'fr-fr';
+    const isGerman = lang.includes('german') || lang === 'de' || lang === 'de-de';
+    const isJapanese = lang.includes('japanese') || lang === 'ja' || lang === 'ja-jp';
 
-    if (voiceStyle) {
-      // If directly a Neural voice ID
-      if (voiceStyle.includes('Neural')) {
+    // 1. If voiceStyle is an explicit Neural ID matching the target language
+    if (voiceStyle && voiceStyle.includes('Neural')) {
+      const isVoiceMatchingLang =
+        (isHindi && voiceStyle.startsWith('hi-')) ||
+        (isBengali && voiceStyle.startsWith('bn-')) ||
+        (isSpanish && voiceStyle.startsWith('es-')) ||
+        (isFrench && voiceStyle.startsWith('fr-')) ||
+        (isGerman && voiceStyle.startsWith('de-')) ||
+        (isJapanese && voiceStyle.startsWith('ja-')) ||
+        (!isHindi && !isBengali && !isSpanish && !isFrench && !isGerman && !isJapanese);
+
+      if (isVoiceMatchingLang) {
         return voiceStyle;
       }
+    }
 
+    // 2. Language-specific neural voice routing (prevents English voices speaking non-English text)
+    if (isHindi) {
+      if (voiceStyle && (voiceStyle.toLowerCase().includes('female') || voiceStyle.toLowerCase().includes('swara') || voiceStyle.toLowerCase().includes('calm'))) {
+        return 'hi-IN-SwaraNeural';
+      }
+      return 'hi-IN-MadhurNeural';
+    }
+
+    if (isBengali) {
+      if (voiceStyle && (voiceStyle.toLowerCase().includes('female') || voiceStyle.toLowerCase().includes('tanishaa') || voiceStyle.toLowerCase().includes('calm'))) {
+        return 'bn-IN-TanishaaNeural';
+      }
+      return 'bn-IN-BashkarNeural';
+    }
+
+    if (isSpanish) {
+      if (voiceStyle && (voiceStyle.toLowerCase().includes('female') || voiceStyle.toLowerCase().includes('elvira'))) {
+        return 'es-ES-ElviraNeural';
+      }
+      return 'es-ES-AlvaroNeural';
+    }
+
+    if (isFrench) {
+      if (voiceStyle && (voiceStyle.toLowerCase().includes('female') || voiceStyle.toLowerCase().includes('denise'))) {
+        return 'fr-FR-DeniseNeural';
+      }
+      return 'fr-FR-HenriNeural';
+    }
+
+    if (isGerman) {
+      if (voiceStyle && (voiceStyle.toLowerCase().includes('female') || voiceStyle.toLowerCase().includes('katja'))) {
+        return 'de-DE-KatjaNeural';
+      }
+      return 'de-DE-ConradNeural';
+    }
+
+    if (isJapanese) {
+      if (voiceStyle && (voiceStyle.toLowerCase().includes('female') || voiceStyle.toLowerCase().includes('nanami'))) {
+        return 'ja-JP-NanamiNeural';
+      }
+      return 'ja-JP-KeitaNeural';
+    }
+
+    // 3. English voice selection
+    if (voiceStyle) {
       // Check predefined map
       if (VOICE_STYLE_TO_EDGE_VOICE[voiceStyle]) {
         return VOICE_STYLE_TO_EDGE_VOICE[voiceStyle];
@@ -120,18 +194,6 @@ export class EdgeTTSProvider implements TTSProvider {
           return id;
         }
       }
-    }
-
-    // If language is Bengali, default to Bashkar or Tanishaa
-    if (isBengaliLang) {
-      if (voiceStyle && (voiceStyle.toLowerCase().includes('female') || voiceStyle.toLowerCase().includes('tanishaa') || voiceStyle.toLowerCase().includes('calm'))) {
-        return 'bn-IN-TanishaaNeural';
-      }
-      return 'bn-IN-BashkarNeural';
-    }
-
-    if (language && VOICE_STYLE_TO_EDGE_VOICE[language]) {
-      return VOICE_STYLE_TO_EDGE_VOICE[language];
     }
 
     // Default to the cinematic Christopher documentary voice

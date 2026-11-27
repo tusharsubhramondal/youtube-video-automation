@@ -47,11 +47,16 @@ export const videoAgent = {
       const results = [];
 
       for (const scene of scenesToProcess) {
-        // Check if an externally imported/uploaded video clip is already associated with this scene
+        // Check if a valid video clip is already generated or imported for this scene
         if (scene.videoUrl && !sceneId) {
           const resolvedVideoPath = resolveAssetLocalPath(scene.videoUrl);
-          if (resolvedVideoPath && resolvedVideoPath.endsWith('.mp4')) {
-            logger.info(`Scene ${scene.sceneNumber} has existing imported clip: ${path.basename(resolvedVideoPath)}. Preserving external asset.`);
+          if (
+            resolvedVideoPath &&
+            resolvedVideoPath.endsWith('.mp4') &&
+            fs.existsSync(resolvedVideoPath) &&
+            fs.statSync(resolvedVideoPath).size > 1000
+          ) {
+            logger.info(`Scene ${scene.sceneNumber} has existing valid clip: ${path.basename(resolvedVideoPath)}. Preserving asset.`);
             results.push({
               sceneNumber: scene.sceneNumber,
               url: scene.videoUrl,
@@ -63,14 +68,17 @@ export const videoAgent = {
         }
 
         const videoDir = getProjectStoragePath(project.id, 'video');
+        if (!fs.existsSync(videoDir)) {
+          fs.mkdirSync(videoDir, { recursive: true });
+        }
         const filename = `clip_scene_${scene.sceneNumber}_${Date.now()}.mp4`;
         const outputPath = path.join(videoDir, filename);
 
-        // Find local image path if image exists
+        // Find local image path if image exists and is non-empty
         let localImagePath: string | undefined;
         if (scene.imageUrl) {
           const resolvedImg = resolveAssetLocalPath(scene.imageUrl);
-          if (resolvedImg) {
+          if (resolvedImg && fs.existsSync(resolvedImg) && fs.statSync(resolvedImg).size > 200) {
             localImagePath = resolvedImg;
           }
         }

@@ -157,6 +157,7 @@ export interface YouTubeProvider {
     videoId: string;
     url: string;
     publishedAt: Date;
+    thumbnailUploaded?: boolean;
     captionTrack?: CaptionUploadResult;
   }>;
   uploadCaptions?(params: CaptionUploadParams): Promise<CaptionUploadResult>;

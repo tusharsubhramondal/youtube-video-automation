@@ -57,17 +57,30 @@ export const scriptAgent = {
         where: { projectId },
       });
 
-      // Insert new generated scenes
-      for (const scene of scriptResult.scenes) {
+      const rawScenes = Array.isArray(scriptResult?.scenes) ? scriptResult.scenes : [];
+      if (rawScenes.length === 0) {
+        throw new Error('Script generation returned zero scenes. Please retry.');
+      }
+
+      // Insert new generated scenes with full validation
+      for (let idx = 0; idx < rawScenes.length; idx++) {
+        const scene = rawScenes[idx];
+        const sceneNum = typeof scene.sceneNumber === 'number' ? scene.sceneNumber : idx + 1;
+        const narration = (scene.narrationText || '').trim() || project.topic;
+        const visual = (scene.visualPrompt || '').trim() || `Cinematic shot for ${project.topic}, high detail, 8k`;
+        const duration = typeof scene.durationSeconds === 'number' && scene.durationSeconds > 0
+          ? scene.durationSeconds
+          : Math.max(3, Math.round(project.targetDuration / rawScenes.length));
+
         await prisma.videoScene.create({
           data: {
             projectId,
-            sceneNumber: scene.sceneNumber,
-            narrationText: scene.narrationText,
-            visualPrompt: scene.visualPrompt,
+            sceneNumber: sceneNum,
+            narrationText: narration,
+            visualPrompt: visual,
             cameraMovement: scene.cameraMovement || (project.visualStyle?.includes('Parallax') ? 'Auto (2.5D Parallax Cycle)' : 'Auto (Cinematic Cycle)'),
             transition: scene.transition || 'fade',
-            duration: scene.durationSeconds || 5.0,
+            duration,
             status: 'PENDING',
           },
         });

@@ -45,7 +45,11 @@ export class GeminiProvider implements LLMProvider {
 
           const generativeModel = this.genAI.getGenerativeModel({
             model,
-            generationConfig: { responseMimeType: 'application/json' },
+            generationConfig: {
+              responseMimeType: 'application/json',
+              maxOutputTokens: 8192,
+              temperature: 0.7,
+            },
           });
 
           const response = await generativeModel.generateContent(prompt);
@@ -157,6 +161,12 @@ Research Context:
 Angle: ${params.research.angle}
 Keywords: ${params.research.keywords.join(', ')}
 
+CRITICAL JSON FORMATTING RULES:
+- Output MUST be 100% strictly valid JSON matching the schema.
+- NEVER use unescaped double quotes (") inside "narrationText" or "visualPrompt". If quoting speech, concepts, or titles, use single quotes (') or punctuation.
+- Do NOT insert raw unescaped newlines inside string values. Keep each narrationText and visualPrompt as a single continuous line.
+- Ensure all brackets and braces are completely closed.
+
 Return a valid JSON object matching this exact schema:
 {
   "title": string,
@@ -176,7 +186,37 @@ Return a valid JSON object matching this exact schema:
 }`;
 
       const rawText = await this.executeWithModelFallback(prompt);
-      return safeParseJson<ScriptResult>(rawText);
+      const parsed = safeParseJson<any>(rawText);
+
+      // Handle cases where the LLM returns an array of scenes directly
+      let scriptResult: ScriptResult;
+      if (Array.isArray(parsed)) {
+        scriptResult = {
+          title: params.topic,
+          hook: params.topic,
+          scenes: parsed,
+          callToAction: 'Subscribe for more!',
+          totalEstimatedDuration: params.targetDuration,
+        };
+      } else {
+        scriptResult = parsed as ScriptResult;
+      }
+
+      if (!Array.isArray(scriptResult.scenes)) {
+        scriptResult.scenes = [];
+      }
+
+      // Sanitize scene properties
+      scriptResult.scenes = scriptResult.scenes.map((s: any, idx: number) => ({
+        sceneNumber: typeof s.sceneNumber === 'number' ? s.sceneNumber : idx + 1,
+        narrationText: String(s.narrationText || '').trim(),
+        visualPrompt: String(s.visualPrompt || '').trim() || `Cinematic visual representation of ${params.topic}`,
+        cameraMovement: s.cameraMovement || (params.visualStyle?.includes('Parallax') ? 'Auto (2.5D Parallax Cycle)' : 'Auto (Cinematic Cycle)'),
+        transition: s.transition || 'fade',
+        durationSeconds: typeof s.durationSeconds === 'number' && s.durationSeconds > 0 ? s.durationSeconds : 5,
+      }));
+
+      return scriptResult;
     } catch (err) {
       logger.error('Gemini generateScript error:', err);
       throw err;

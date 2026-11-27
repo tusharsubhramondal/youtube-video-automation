@@ -244,6 +244,7 @@ export const publishingAgent = {
       });
 
       const durationMs = Date.now() - startTime;
+      const thumbInfo = uploadResult.thumbnailUploaded ? ' | Custom Thumbnail: Set' : '';
       const captionInfo = uploadResult.captionTrack
         ? ` | Closed Captions: Uploaded (${uploadResult.captionTrack.language} - ${uploadResult.captionTrack.name})`
         : '';
@@ -255,7 +256,7 @@ export const publishingAgent = {
           completedAt: new Date(),
           executionTimeMs: durationMs,
           outputPayload: JSON.stringify(uploadResult),
-          logs: `Published video successfully to YouTube! Video ID: ${uploadResult.videoId}, URL: ${uploadResult.url}${captionInfo}`,
+          logs: `Published video successfully to YouTube! Video ID: ${uploadResult.videoId}, URL: ${uploadResult.url}${thumbInfo}${captionInfo}`,
         },
       });
 

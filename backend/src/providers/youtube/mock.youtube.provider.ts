@@ -32,6 +32,7 @@ export class MockYouTubeProvider implements YouTubeProvider {
     videoId: string;
     url: string;
     publishedAt: Date;
+    thumbnailUploaded?: boolean;
     captionTrack?: CaptionUploadResult;
   }> {
     const mockId = `mock_yt_${Math.random().toString(36).substring(2, 10)}`;

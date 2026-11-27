@@ -4,6 +4,7 @@ import { YouTubeProvider, YouTubeUploadParams, CaptionUploadParams, CaptionUploa
 import { config } from '../../config/index.js';
 import { logger } from '../../utils/logger.js';
 import { prisma } from '../../services/prisma.service.js';
+import { ensureYouTubeThumbnailOptimized } from '../../utils/thumbnail.util.js';
 
 export class GoogleYouTubeProvider implements YouTubeProvider {
   name = 'Google YouTube Data API v3';
@@ -111,6 +112,7 @@ export class GoogleYouTubeProvider implements YouTubeProvider {
     videoId: string;
     url: string;
     publishedAt: Date;
+    thumbnailUploaded?: boolean;
     captionTrack?: CaptionUploadResult;
   }> {
     if (!fs.existsSync(params.videoFilePath)) {
@@ -192,18 +194,24 @@ export class GoogleYouTubeProvider implements YouTubeProvider {
     const videoId = res.data.id!;
     logger.info(`Uploaded video to YouTube successfully. Video ID: ${videoId}`);
 
+    let thumbnailUploaded = false;
     // If thumbnail provided, upload thumbnail
     if (params.thumbnailPath && fs.existsSync(params.thumbnailPath)) {
       try {
-        await youtube.thumbnails.set({
+        const optimized = await ensureYouTubeThumbnailOptimized(params.thumbnailPath);
+        logger.info(`[GoogleYouTubeProvider] Uploading thumbnail to YouTube (${optimized.sizeBytes} bytes, ${optimized.mimeType}): ${optimized.path}`);
+
+        const thumbRes = await youtube.thumbnails.set({
           videoId,
           media: {
-            body: fs.createReadStream(params.thumbnailPath),
+            mimeType: optimized.mimeType,
+            body: fs.createReadStream(optimized.path),
           },
         });
-        logger.info(`Uploaded thumbnail for YouTube video ${videoId}`);
+        thumbnailUploaded = true;
+        logger.info(`[GoogleYouTubeProvider] Successfully uploaded thumbnail for YouTube video ${videoId}`, thumbRes.data);
       } catch (err: any) {
-        logger.warn(`Failed to set thumbnail on YouTube: ${err.message}`);
+        logger.warn(`[GoogleYouTubeProvider] Failed to set thumbnail on YouTube: ${err.message}`);
       }
     }
 
@@ -233,6 +241,7 @@ export class GoogleYouTubeProvider implements YouTubeProvider {
       videoId,
       url: `https://www.youtube.com/watch?v=${videoId}`,
       publishedAt: new Date(),
+      thumbnailUploaded,
       captionTrack,
     };
   }

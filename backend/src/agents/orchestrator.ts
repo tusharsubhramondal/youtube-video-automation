@@ -39,7 +39,7 @@ export class MasterOrchestrator {
       case 'EDITING':
         return await editingAgent.run(projectId, payload?.renderId, payload);
       case 'THUMBNAIL':
-        return await thumbnailAgent.run(projectId, payload?.customPrompt);
+        return await thumbnailAgent.run(projectId, payload);
       case 'SEO':
         return await seoAgent.run(projectId);
       case 'PUBLISHING':
